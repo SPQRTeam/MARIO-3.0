@@ -21,6 +21,9 @@ from src.ml.models.openai_chat_wrapper import commentary_llm_from_config
 from src.utils.coherence import check_coherence_with_saved_or_update
 from src.utils.side_hint import SideHint
 
+from src.utils.config.paths import ROOT_DIR
+
+
 
 def parse_args():
     """Parse command line arguments."""
@@ -140,9 +143,10 @@ Examples:
 
 
 def process_section(section_name, models, args, config, logger):
+    section_paths = config.get_paths(mario_section_name=section_name)
     logger.info(f"Now doing section: {section_name}")
-    logger.info(f"Game directory: {config.game_dir}")
-    logger.info(f"Video file: {config.video_path(section_name)}")
+    logger.info(f"Game directory: {section_paths.game_dir}")
+    logger.info(f"Video file: {section_paths.source_video}")
     logger.info(f"Features:")
     logger.info(f"  - Write CSV: {config.features.write_csv}")
     logger.info(f"  - Write videos: {config.features.write_videos}")
@@ -151,8 +155,8 @@ def process_section(section_name, models, args, config, logger):
     )
 
     # Check video exists
-    if not config.is_streaming and not config.video_path(section_name).exists():
-        logger.error(f"Video file not found: {config.video_path(section_name)}")
+    if not config.is_streaming and not section_paths.source_video.exists():
+        logger.error(f"Video file not found: {section_paths.source_video}")
         logger.error("Please check your config.yaml settings")
         return 1
     
@@ -160,14 +164,14 @@ def process_section(section_name, models, args, config, logger):
         sh_tmp = SideHint.get_serialization(*args.side_hint)
     else:
         sh_tmp = None
-    sh_tmp = check_coherence_with_saved_or_update(config.section_dir(section_name) / "side_hint.txt", sh_tmp, "side hint", "-sh", required=False)
+    sh_tmp = check_coherence_with_saved_or_update(section_paths.side_hint_txt, sh_tmp, "side hint", "-sh", required=False)
     if sh_tmp:
         the_side_hint = SideHint.loads(sh_tmp)
     else:
         the_side_hint = None
 
     # Determine output path
-    output_csv = args.output if args.output else config.mario_csv_path(section_name)
+    output_csv = args.output if args.output else section_paths.mario_csv
     logger.info(f"Output CSV: {output_csv}")
 
     # Initialize and run tracking
@@ -188,8 +192,8 @@ def process_section(section_name, models, args, config, logger):
     logger.info(f"Results saved to: {output_csv}")
 
     if config.features.write_videos:
-        logger.info(f"Annotated video: {config.mario_annotated_video_path(section_name)}")
-        logger.info(f"Plan-view video: {config.mario_planview_path(section_name)}")
+        logger.info(f"Annotated video: {section_paths.annotated_video}")
+        logger.info(f"Plan-view video: {section_paths.planview_video}")
 
 
 def main():
@@ -221,6 +225,7 @@ def main():
     # Load configuration
     logger.info(f"Loading configuration from: {args.config or 'config.yaml'}")
     config = utils.MarioConfig.from_yaml(args)
+    paths = config.get_paths()
 
     if config.is_streaming:
         if not args.sections:
@@ -263,18 +268,18 @@ def main():
 
     Models = namedtuple("Models", ["yolo_v8", "yolo_v12", "ocr_vlm", "llm", "match_tts"])
     models = Models(
-        yolo_v8 = YOLO(str(config.root_dir / config.vision_config.yolo_v8)),
-        yolo_v12 = YOLO(str(config.root_dir / config.vision_config.yolo_v12)),
+        yolo_v8 = YOLO(str(ROOT_DIR / config.vision_config.yolo_v8)),
+        yolo_v12 = YOLO(str(ROOT_DIR / config.vision_config.yolo_v12)),
         ocr_vlm = OllamaWrapper(config.models.ocr_vlm_name),
         llm = llm,
         match_tts=match_tts,
     )
 
-    sections_to_do = utils.get_sections_to_do(config.game_dir, config.dir_names.mario_section_prefix, args.sections)
+    sections_to_do = utils.get_sections_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
 
     if config.is_streaming:
         for section_name in sections_to_do:
-            config.section_dir(section_name).mkdir(parents=True, exist_ok=True)
+            config.get_paths(mario_section_name=section_name).mario_section_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         for section_name in sections_to_do:

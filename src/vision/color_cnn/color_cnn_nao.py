@@ -6,12 +6,13 @@ import yaml
 
 from src.ml.models.color_classifier import ColorClassifierCNNv0
 from ...utils.logger import setup_logger
+from src.utils.config.paths import ROOT_DIR
 
 class ColorCNNNao:
     def __init__(self, config, log_level):
         """Load CNN color classification model."""
         self.logger = setup_logger(__name__, level=log_level)
-        config_path = config.root_dir / config.vision_config.color_classifier_config
+        config_path = ROOT_DIR / config.vision_config.color_classifier_config
 
         if not config_path.exists():
             raise FileNotFoundError(f"Color classifier config not found: {config_path}")
@@ -22,7 +23,7 @@ class ColorCNNNao:
         self.idx2color = {int(k): v for k, v in model_config['idx2label'].items()}
         num_classes = model_config['num_classes']
         image_size = tuple(model_config['image_size'])
-        model_path = config.root_dir / config.vision_config.color_classifier_weights
+        model_path = ROOT_DIR / config.vision_config.color_classifier_weights
 
         # Load model
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

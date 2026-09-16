@@ -27,7 +27,7 @@ from ..commentator.commentary_display import (
 )
 
 if TYPE_CHECKING:
-    from ..utils.config_loader import MarioConfig
+    from ..utils.config.config_loader import MarioConfig
     from ..utils.drawing import Drawer
     from .detection import Detection
 

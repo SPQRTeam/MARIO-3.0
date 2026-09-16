@@ -749,8 +749,9 @@ def main():
     elif args.section:
         config = utils.load_config(args.config)
         section_name = f"mario_{args.section}"
-        video_path = config.video_path(section_name)
-        output_dir = args.output or config.game_dir / "sam3_dataset"
+        paths = config.get_paths(mario_section_name=section_name)
+        video_path = paths.source_video
+        output_dir = args.output or paths.game_dir / "sam3_dataset"
     else:
         print("ERROR: provide --image, --video, or --section")
         sys.exit(1)

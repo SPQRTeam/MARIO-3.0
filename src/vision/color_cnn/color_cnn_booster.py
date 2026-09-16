@@ -6,6 +6,7 @@ from ...training.train import (
     resolve_hint_color,
 )
 from ...utils.logger import setup_logger
+from src.utils.config.paths import ROOT_DIR
 
 class ColorCNNBooster:
     def __init__(self, config, log_level):
@@ -14,7 +15,7 @@ class ColorCNNBooster:
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        model_path = config.root_dir / config.vision_config.color_classifier_weights
+        model_path = ROOT_DIR / config.vision_config.color_classifier_weights
         self.cnn, self.cnn_idx2color = load_model(model_path, self.device)
         self._cnn_abstain_threshold = config.features.cnn_abstain_below_confidence
 

@@ -237,8 +237,9 @@ if __name__ == "__main__":
     parser.add_argument('--section', '-s', type=str, help="Section to work with. ONLY THE LETTER.")
     args = parser.parse_args()
     config = utils.MarioConfig.from_yaml(args.config, args.game_name)
+    paths = config.get_paths(mario_section_name=f"mario_{args.section}")
 
-    cap = cv.VideoCapture(str(config.video_path(f"mario_{args.section}")))
+    cap = cv.VideoCapture(str(paths.source_video))
     _, src_im = cap.read()
 
     CalibrationStudio(src_im, config).go()

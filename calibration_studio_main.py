@@ -19,13 +19,14 @@ args.vision_type = None  # for MarioConfig compatibility
 
 config = utils.MarioConfig.from_yaml(args, update_game_history=False)
 section_name = config.dir_names.mario_section_prefix + args.section
+paths = config.get_paths(mario_section_name=section_name)
 
 if args.calibration_frame is not None:
     raise NotImplementedError("This is easy to implement but it's best to use -ct if possible")
 elif args.calibration_timestamp is not None:
-    video = cv2.VideoCapture(str(config.video_path(section_name)))
+    video = cv2.VideoCapture(str(paths.source_video))
     if not video.isOpened():
-        raise ValueError(f"Cannot open video file: {config.video_path(section_name)}")
+        raise ValueError(f"Cannot open video file: {paths.source_video}")
     video.set(cv2.CAP_PROP_POS_MSEC, args.calibration_timestamp * 1000)
     _, calibration_frame = video.read()
 else:
@@ -33,11 +34,10 @@ else:
 
 calibrator = CalibrationStudio(calibration_frame, config)
 
-camera_calibration_fname = config.game_dir / section_name / "camera_calbration.npz"
-_ = calibrator.try_load(camera_calibration_fname)
+_ = calibrator.try_load(paths.camera_calibration_npz)
 calibrator.go()
 if calibrator.result_ok:
-    calibrator.save(camera_calibration_fname)
+    calibrator.save(paths.camera_calibration_npz)
     exit(0)
 else:
     exit(1)

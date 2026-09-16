@@ -124,16 +124,18 @@ class SectionData:
         )
 
 def process_single_section(mario_section_name, config):
-    with open(config.game_dir / mario_section_name / "gc_section_backlink.json") as f:
+    section_paths = config.get_paths(mario_section_name=mario_section_name)
+    with open(section_paths.gcsec_backlink) as f:
         gc_section_name = json.load(f)["gc_section_name"]
-    with open(config.gameinfo_path) as f:
+    section_paths = config.get_paths(mario_section_name=mario_section_name, gc_section_name=gc_section_name)
+    with open(section_paths.gameinfo) as f:
         gameinfo = munch.munchify(yaml.safe_load(f))
-    with open(config.team_mapping_lr_path(mario_section_name)) as f:
+    with open(section_paths.team_mapping_lr) as f:
         team_mapping_lr = munch.munchify(json.load(f))
-    with open(config.game_dir / mario_section_name / "sumgen_output" / "stats.json") as f:
+    with open(section_paths.sumgen_stats_json) as f:
         basic_stats = json.load(f)
 
-    with open(config.game_dir / gc_section_name / "metadata.yaml") as f:
+    with open(section_paths.gc_metadata_yaml) as f:
         phase = yaml.safe_load(f)["phase"]
 
     left_team = munch.Munch(
@@ -181,6 +183,7 @@ def process_single_section(mario_section_name, config):
 
 
 def main(mario_section_names, config):
+    paths = config.get_paths()
     llm = commentary_llm_from_config(config.models)
 
     data_by_phase = dict()
@@ -230,6 +233,6 @@ def main(mario_section_names, config):
         print()
         print(compare_output)
 
-    (config.game_dir / "sumgen_global").mkdir(exist_ok=True)
-    with open(config.game_dir / "sumgen_global" / "summary.txt", "w") as f:
+    paths.sumgen_global_output_dir.mkdir(exist_ok=True)
+    with open(paths.sumgen_summary_txt, "w") as f:
         f.write(gen_summary)

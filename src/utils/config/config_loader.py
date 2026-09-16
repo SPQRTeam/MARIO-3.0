@@ -8,8 +8,10 @@ from src.utils.transforms import TransformsCalculator
 import numpy as np
 from datetime import datetime
 
-from .coherence import check_coherence_with_saved_or_update
+from ..coherence import check_coherence_with_saved_or_update
 from src.vision.color_cnn import ColorCNNBooster, ColorCNNNao
+
+from .paths import PathsConfig, ROOT_DIR
 
 FIELD_TYPE_TO_FILE = {
     "SPL": "fieldSPL.yaml",
@@ -32,9 +34,6 @@ VISION_TYPE_TO_CNN = {
     "t1": ColorCNNBooster,
 }
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
-
-
 def _deep_merge(base: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str, Any]:
     """Recursively merge ``overlay`` into ``base`` (mutates ``base``)."""
     for k, v in overlay.items():
@@ -50,7 +49,7 @@ class MarioConfig(Munch):
     def __init__(self, data, args, update_game_history=True):
         super().__init__(data)
 
-        game_history_path = ROOT_DIR / self.video.game_history_fname
+        game_history_path = ROOT_DIR / self.dir_names.game_history_fname
         if game_history_path.exists():
             with open(game_history_path, 'r') as f:
                 game_history = yaml.safe_load(f)
@@ -84,13 +83,19 @@ class MarioConfig(Munch):
             game_history.append(record)
 
         self.game_name = record["game_name"]
+        paths_path = ROOT_DIR / "config" / "paths" / "paths.yaml"
+        with open(paths_path, 'r') as f:
+            self.paths_data = yaml.safe_load(f)
+        # paths don't get a field in self because they're heavily dependent on the section
+        paths = self.get_paths()  # that said, we do need some section-agnostic paths right now
+
         self.is_streaming = "streaming_url" in record
         if self.is_streaming:
-            self.game_dir.mkdir(exist_ok=True)
+            paths.game_dir.mkdir(exist_ok=True)
             self.streaming_url = record["streaming_url"]
             self.time_range = record["time_range"]
 
-        self.field_type = check_coherence_with_saved_or_update(self.game_dir / "field_type.txt", args.field_type, "field type", "-f", required=True)
+        self.field_type = check_coherence_with_saved_or_update(paths.field_type_txt, args.field_type, "field type", "-f", required=True)
         # load field dimensions
         field_path = ROOT_DIR / "config" / "fields" / FIELD_TYPE_TO_FILE[self.field_type]
         with open(field_path, 'r') as f:
@@ -118,9 +123,12 @@ class MarioConfig(Munch):
             with open(game_history_path, 'w') as f:
                 yaml.dump(game_history, f)
 
+    def get_paths(self, *, mario_section_name=None, gc_section_name=None):
+        return PathsConfig(self.paths_data, self.game_name, mario_section_name=mario_section_name, gc_section_name=gc_section_name)
+
     # lazy vision config
     def _load_vision_config(self):
-        self._vision_type = check_coherence_with_saved_or_update(self.game_dir / "vision_type.txt", self.vision_type_from_cli, "vision_type", "-v", required=True)
+        self._vision_type = check_coherence_with_saved_or_update(self.get_paths().vision_type_txt, self.vision_type_from_cli, "vision_type", "-v", required=True)
         vision_path = ROOT_DIR / "config" / "vision_types" / VISION_TYPE_TO_FILE[self._vision_type]
         with open(vision_path, 'r') as f:
             data = yaml.safe_load(f)
@@ -136,68 +144,6 @@ class MarioConfig(Munch):
             self._load_vision_config()
         return self._vision_config
 
-
-    # that function is outdated your honor
-    # kept for back-compatibility
-    @property
-    def root_dir(self):
-        return ROOT_DIR
-    
-    @property
-    def data_dir(self):
-        return ROOT_DIR / self.dir_names.data
-    
-    @property
-    def game_dir(self):
-        return self.data_dir / "games" / self.game_name
-
-    def section_dir(self, section_name) -> Path:
-        return self.game_dir / section_name
-
-    def video_path(self, section_name) -> Path:
-        """Get full video path."""
-        return self.game_dir / section_name / self.video.video_fname
-
-    def mario_annotated_video_path(self, section_name) -> Path:
-        """Get full output video path."""
-        return self.game_dir / section_name / self.video.output_fname
-
-    def mario_planview_path(self, section_name) -> Path:
-        """Get full planview output path."""
-        return self.game_dir / section_name / self.video.output_planview_fname
-
-    def mario_commentary_audio_path(self, section_name) -> Path:
-        """Get full commentary mixed audio path."""
-        return self.game_dir / section_name / self.video.output_commentary_audio_fname
-
-    def mario_clean_with_commentary_video_path(self, section_name) -> Path:
-        """Get full clean video path muxed with commentary audio."""
-        return self.game_dir / section_name / self.video.output_clean_with_commentary_fname
-
-    def mario_csv_path(self, section_name) -> Path:
-        """Get full CSV output path."""
-        return self.game_dir / section_name / self.video.output_csv_fname
-
-    def robot_pics_path(self, section_name) -> Path:
-        """Get robot pictures output directory."""
-        return self.game_dir / section_name / self.video.robot_pics_dir
-
-    @property
-    def gc_log_path(self) -> Path:
-        """Get game controller YAML path."""
-        return self.game_dir / self.game_controller.gc_log_fname
-
-    def gc_csv_raw_path(self, section_name) -> Path:
-        """Get game controller CSV path."""
-        return self.game_dir / section_name / self.game_controller.gc_csv_fname
-
-    @property
-    def gameinfo_path(self) -> Path:
-        return self.game_dir / self.game_controller.gameinfo_fname
-
-    @property
-    def tcm_dir(self) -> Path:
-        return (ROOT_DIR / self.game_controller.tcm_dir_relative).resolve()
 
     @property
     def min_robot_persistence_frames(self):
@@ -219,32 +165,9 @@ class MarioConfig(Munch):
     def neotrack_unambiguous_length(self):
         return self.processing.fps * self.mario_postprocessing.neotrack_unambiguous_length_secs
 
-    def mario_post_step2_path(self, section_name) -> Path:
-        return self.game_dir / section_name / self.mario_postprocessing.mario_post_step2_fname
-
-    def section_params_path(self, section_name) -> Path:
-        return self.game_dir / section_name / self.sincrolog.section_params_fname
-
-    def gc_csv_post_step3_path(self, section_name) -> Path:
-        return self.game_dir / section_name / self.sincrolog.gc_csv_post_step3_fname
-
-    def sincrolog_output_path(self, section_name) -> Path:
-        return self.game_dir / section_name / self.sincrolog.output_dirname
-
-    def merged_csv_path(self, section_name) -> Path:
-        return self.sincrolog_output_path(section_name) / self.sincrolog.merged_csv_fname
-
-    def breaks_csv_path(self, section_name) -> Path:
-        return self.sincrolog_output_path(section_name) / self.sincrolog.breaks_csv_fname
-
-    def team_mapping_lr_path(self, section_name) -> Path:
-        return self.game_dir / section_name / self.game_controller.team_mapping_lr_fname
-
-    def game_state_path(self, section_name) -> Path:
-        return self.game_dir / section_name / self.sumgen.game_state_fname
 
     def make_transforms(self):
-        from .drawing import render_field_image, MARGIN_PX
+        from ..drawing import render_field_image, MARGIN_PX
         img, _ = render_field_image(self.field_config)
         img_h, img_w = img.shape[:2]
         return TransformsCalculator(

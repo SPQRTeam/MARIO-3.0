@@ -26,6 +26,8 @@ def init(section_name):
     global MARIO_START_TIME, FLIP_TEAM, team_map, cap, width, height, \
         frame_count, fps, out, gc_df, mario_df, sincrolog_df, draw
 
+    raise NotImplementedError("With the PathsConfig refactor, all \"path\" configs need to be updated")
+
     team_map = utils.extract_team_mapping_from_yaml(config.gameinfo_path)
 
     # Carica i parametri dal file di configurazione JSON
@@ -297,8 +299,9 @@ if args.mario + args.fused != 1:
     parser.error("Please select exactly one visualization mode (mario or fused).")
 
 config = utils.MarioConfig.from_yaml(args)
+paths = config.get_paths()
 
-section_names = utils.get_section_names_to_do(config.game_dir, config.dir_names.gc_section_prefix, args.sections)
+section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.gc_section_prefix, args.sections)
 
 for sn in section_names:
     try:

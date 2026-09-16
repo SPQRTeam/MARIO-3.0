@@ -28,6 +28,7 @@ if args.halp:
     exit(0)
 
 config = utils.MarioConfig.from_yaml(args)
+paths = config.get_paths()
 
 if 1 in args.steps:
     import src.post_process.sincrolog.step1_yaml2csv as step1
@@ -35,13 +36,13 @@ if 1 in args.steps:
 
 if 2 in args.steps:
     import src.post_process.sincrolog.step2_filtermario as step2
-    section_names = utils.get_section_names_to_do(config.game_dir, config.dir_names.mario_section_prefix, args.sections)
+    section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
     for sn in section_names:
         step2.main(sn, config)
 
 if 3 in args.steps:
     import src.post_process.sincrolog.step3_penalties as step3
-    section_names = utils.get_section_names_to_do(config.game_dir, config.dir_names.gc_section_prefix, args.sections)
+    section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.gc_section_prefix, args.sections)
     for sn in section_names:
         step3.main(sn, config)
 
@@ -60,13 +61,13 @@ if 4 in args.steps:
         stats.sort_stats('cumtime')
         stats.print_stats()
     else:
-        section_names = utils.get_section_names_to_do(config.game_dir, config.dir_names.gc_section_prefix, args.sections)
+        section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.gc_section_prefix, args.sections)
         for sn in section_names:
             print(sn)
             step4.main(sn, args.time_limit, config)
 
 if 9 in args.steps:
     import src.post_process.sincrolog.stepx_error as stepx
-    section_names = utils.get_section_names_to_do(config.game_dir, config.dir_names.gc_section_prefix, args.sections)
+    section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.gc_section_prefix, args.sections)
     for sn in section_names:
         stepx.main(sn, args.time_limit, config)

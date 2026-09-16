@@ -462,14 +462,15 @@ class MatchCommentaryTTS:
         It is subtracted from every ``source_frame`` so audio timestamps are
         relative to the start of the exported clean video (not the whole recording).
         """
+        paths = config.get_paths(mario_section_name=section_name)
         self._section_name = section_name
         self._section_start_frame: int = int(start_frame)
         if not self._export_joined:
             return
-        self._clean_video_path = Path(config.video_path(section_name))
-        self._audio_mix_path = Path(config.mario_commentary_audio_path(section_name))
-        self._joined_video_path = Path(config.mario_clean_with_commentary_video_path(section_name))
-        self._segments_dir = Path(config.section_dir(section_name)) / "commentary_segments"
+        self._clean_video_path = paths.source_video
+        self._audio_mix_path = paths.commentary_audio
+        self._joined_video_path = paths.commentary_clean_video
+        self._segments_dir = paths.mario_section_dir / "commentary_segments"
         self._segments_dir.mkdir(parents=True, exist_ok=True)
         self._label_manifest_path = self._segments_dir / "audio_label_manifest.jsonl"
         self._label_manifest_path.write_text("", encoding="utf-8")

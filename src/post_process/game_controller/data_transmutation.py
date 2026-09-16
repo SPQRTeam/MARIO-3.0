@@ -216,7 +216,7 @@ class DataTransmuter:
     def stir(self):
         if self.results:
             raise ValueError("Can only be used once.")
-        for item in iterate_yaml_list_items(self.config.gc_log_path):
+        for item in iterate_yaml_list_items(self.config.get_paths().gc_log):
             itemtype =  item["entry"]["__type__"]
 
             if itemtype == "metadata":

@@ -6,8 +6,9 @@ import src.post_process.sincrolog.s2_src.interpolate_ball as interpolation
 import src.post_process.sincrolog.s2_src.process_colors as colors
 
 def main(section_name, config):
+    paths = config.get_paths(mario_section_name=section_name)
     df = pd.read_csv(
-        config.mario_csv_path(section_name),
+        paths.mario_csv,
         dtype={"frame": np.int64, "id": np.int32},
         converters={"bounding_box_in_image_space": ast.literal_eval},
     )
@@ -35,5 +36,4 @@ def main(section_name, config):
     reordered_columns.append("bounding_box_in_image_space")
     df = df.reindex(columns=reordered_columns)
 
-    mario_csv_path = config.mario_post_step2_path(section_name)
-    df.to_csv(mario_csv_path, header=True, index=False)
+    df.to_csv(paths.mario_post_step2_csv, header=True, index=False)

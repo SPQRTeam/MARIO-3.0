@@ -23,13 +23,15 @@ def increment_event(the_munch, event_name, home_or_away):
     the_munch[event_name][home_or_away] += 1
 
 def main(mario_section_name, config):
-    with open(config.game_dir / mario_section_name / "gc_section_backlink.json") as f:
+    paths = config.get_paths(mario_section_name=mario_section_name)
+    with open(paths.gcsec_backlink) as f:
         gc_section_name = json.load(f)["gc_section_name"]
-    with open(config.section_dir(mario_section_name) / "symbolic_events.jsonl") as f:
+    paths = config.get_paths(mario_section_name=mario_section_name, gc_section_name=gc_section_name)
+    with open(paths.symbolic_events_jsonl) as f:
         events = [json.loads(line) for line in f.readlines()]
-    with open(config.team_mapping_lr_path(mario_section_name)) as f:
+    with open(paths.team_mapping_lr) as f:
         teams = json.load(f)
-    with open(config.gameinfo_path) as f:
+    with open(paths.gameinfo) as f:
         gameinfo = yaml.load(f, Loader=NoTagLoader)
 
     homeness = generate_homeness(teams, gameinfo)
@@ -47,7 +49,7 @@ def main(mario_section_name, config):
         increment_event(stats.events, e["event"], homeness[e["team"]])
 
     # facciamo la stessa cosa ma col GC
-    gc_events = pd.read_csv(config.game_dir / gc_section_name / "events_from_gc.csv")
+    gc_events = pd.read_csv(paths.gc_events_csv)
     stats.gc_events = Munch()
     for _, row in gc_events.iterrows():
         if row.event not in stats.events.keys():
@@ -58,5 +60,5 @@ def main(mario_section_name, config):
         stats.events[gc_evname] = stats.gc_events[gc_evname]
     del stats.gc_events
 
-    with open(config.section_dir(mario_section_name) / "sumgen_output" / "stats.json", 'w') as f:
+    with open(paths.sumgen_stats_json, 'w') as f:
         json.dump(stats, f, indent=4)

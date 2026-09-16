@@ -1,0 +1,58 @@
+data_dir: "$ROOT/data"
+game_dir: "$data_dir/games/$GAME"
+mario_section_dir: "$game_dir/$MARIO_SECTION"
+gc_section_dir: "$game_dir/$GC_SECTION"
+
+default_gameinfo: "$data_dir/default_gameinfo.yaml"
+
+gc_log: "$game_dir/gc.yaml"
+gameinfo: "$game_dir/gameinfo.yaml"
+
+field_type_txt: "$game_dir/field_type.txt"
+vision_type_txt: "$game_dir/vision_type.txt"
+
+source_video: "$mario_section_dir/video.mp4"
+annotated_video: "$mario_section_dir/output.mp4"
+planview_video: "$mario_section_dir/output_planview.mp4"
+commentary_audio: "$mario_section_dir/output_commentary.wav"
+commentary_video: "$mario_section_dir/output_commentary.mp4"
+commentary_clean_video: "$mario_section_dir/output_clean_commentary.mp4"
+
+camera_calibration_npz: "$mario_section_dir/camera_calbration.npz"
+side_hint_txt: "$mario_section_dir/side_hint.txt"
+
+robot_pics_dir: "$mario_section_dir/robot_pics"
+
+mario_csv: "$mario_section_dir/output.csv"
+team_mapping_lr: "$mario_section_dir/teams.json"
+symbolic_events_jsonl: "$mario_section_dir/symbolic_events.jsonl"
+
+# sincrolog stuff follows. sincrolog hasn't been touched in a while so it's in kind of a limbo where some names may turn out to be outdated
+
+gc_raw_csv: "$gc_section_dir/gc.csv"
+mario_post_step2_csv: "$mario_section_dir/mario_processed.csv"
+section_params: "$gc_section_dir/section_params.json"
+gc_post_step3_csv: "$gc_section_dir/gc_processed.csv"
+
+sincrolog_output_dir: "$gc_section_dir/orientazioniReduxOutput"
+merged_csv: "$sincrolog_output_dir/merged.csv"
+breaks_csv: "$sincrolog_output_dir/assignment_breaks.csv"
+
+legacy_tcm_dir: "$ROOT/../GC Logs/GameController/bin"  # this is only used for the old gc extraction which is deprecated in favor of DataTransmuter
+
+# sumgen stuff follows
+
+game_state_csv: "$gc_section_dir/game_state.csv"
+gc_collective_csv: "$gc_section_dir/gc_collective.csv"  # TODO marked for deletion, let's just use gc.csv
+gc_individual_dir: "$gc_section_dir/gc_individual"
+gc_events_csv: "$gc_section_dir/events_from_gc.csv"
+gc_penalties_csv: "$gc_section_dir/penalties.csv"
+gc_metadata_yaml: "$gc_section_dir/metadata.yaml"
+
+gcsec_backlink: "$mario_section_dir/gc_section_backlink.json"
+
+sumgen_output_dir: "$mario_section_dir/sumgen_output"
+sumgen_stats_json: "$sumgen_output_dir/stats.json"
+
+sumgen_global_output_dir: "$game_dir/sumgen_global"
+sumgen_summary_txt: "$sumgen_global_output_dir/summary.txt"

@@ -8,8 +8,8 @@ import pandas as pd
 Get the (almost) raw position data from MARIO. Turns out they aren't digested too well on their own.
 """
 
-def mario_csv_data(config, mario_section_name, home_team, away_team):
-    mario_df = pd.read_csv(config.mario_csv_path(mario_section_name))
+def mario_csv_data(section_paths, home_team, away_team):
+    mario_df = pd.read_csv(section_paths.mario_csv)
     mario_df = mario_df.drop(["bounding_box_in_image_space", "score_left", "score_right"], axis=1)
 
     mario_df["frame"] = mario_df["frame"] * 1000 / 30

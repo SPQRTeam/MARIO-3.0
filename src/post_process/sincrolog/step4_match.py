@@ -201,34 +201,32 @@ def flip_gc_robot_origin(gc_df, robots_to_flip, intervals):
 
 def main(section_name, time_limit, config):
 
-    output_dir = config.sincrolog_output_path(section_name)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    paths = config.get_paths(gc_section_name=section_name)
 
-    section_params_path = config.section_params_path(section_name)
-    with open(section_params_path, 'r') as f:
+    paths.sincrolog_output_dir.mkdir(parents=True, exist_ok=True)
+
+    with open(paths.section_params, 'r') as f:
         params = json.load(f)
 
-    team_map = utils.extract_team_mapping_from_yaml(config.gameinfo_path)
+    paths = config.get_paths(gc_section_name=section_name, mario_section_name=params["manual"]["mario_half_name"])
 
-    mario_csv_path = config.mario_post_step2_path(params["manual"]["mario_half_name"])
+    team_map = utils.extract_team_mapping_from_yaml(paths.gameinfo)
+
     mario_df = pd.read_csv(
-        mario_csv_path,
+        paths.mario_post_step2_csv,
         converters={'color': ast.literal_eval},
     )
     
     mario_df["videotime"] = (mario_df.frame / config.processing.fps) * 1000
     mario_df["gametime"] = mario_df.videotime - params["manual"]["mario_start_time"]
 
-    input_gc_path = config.gc_csv_post_step3_path(section_name)
     try:
-        gc_fixed_penalties = pd.read_csv(input_gc_path)
+        gc_fixed_penalties = pd.read_csv(paths.gc_post_step3_csv)
     except pd.errors.EmptyDataError:
         print("This section has no GC data, there is nothing to merge")
         print("Maybe it was such a small section that it had no playing? Who knows.")
         print("Anyways, bye")
-        merged_df = pd.DataFrame()
-        output_file = config.merged_csv_path(section_name)
-        merged_df.to_csv(output_file, index=False)
+        pd.DataFrame().to_csv(paths.merged_csv, index=False)
         return
 
     assignment_data = calculate_assignments_at_start_of_play(gc_fixed_penalties, mario_df, 0, config)
@@ -242,15 +240,12 @@ def main(section_name, time_limit, config):
 
     merged_df, break_df = merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assignment_data, time_limit, team_map, config)
     # ball_df = match_ball.build_ball_dataset(mario_df, gc_fixed_penalties, initial_ball, ball_source, config)
-    # ball_df.to_csv(output_dir / "ball_dataset.csv", index=False)
+    # ball_df.to_csv(paths.sincrolog_output_dir / "ball_dataset.csv", index=False)
 
-    output_file = config.merged_csv_path(section_name)
-    print(f"[CONFIG] Salvando output in: {output_file}")
-    merged_df.to_csv(output_file, index=False)
+    print(f"[CONFIG] Salvando output in: {paths.merged_csv}")
+    merged_df.to_csv(paths.merged_csv, index=False)
 
     if not break_df.empty:
         # Ordina per timestamp per cronologia
         break_df = break_df.sort_values('timestamp_ms').reset_index(drop=True)
-        
-        break_csv_path = config.breaks_csv_path(section_name)
-        break_df.to_csv(break_csv_path, index=False)
+        break_df.to_csv(paths.breaks_csv, index=False)

@@ -16,12 +16,14 @@ def process_section(mario_section_name, config, predetermined_gc_section_name=No
     else:
         print(f"Auto-assigned {mario_section_name} <-> {predetermined_gc_section_name}")
         gc_section_name = predetermined_gc_section_name
-    gc_csv_path = config.game_dir / gc_section_name / "gc_collective.csv"
-    gc_df = pd.read_csv(gc_csv_path)
+
+    section_paths = config.get_paths(mario_section_name=mario_section_name, gc_section_name=gc_section_name)
+
+    gc_df = pd.read_csv(section_paths.gc_collective_csv)
 
     gc_start_time = float(find_gc_start_time(gc_df, 0))
 
-    with open(config.team_mapping_lr_path(mario_section_name)) as f:
+    with open(section_paths.team_mapping_lr) as f:
         team_mapping_lr = json.load(f)
 
     section_params = {
@@ -34,7 +36,7 @@ def process_section(mario_section_name, config, predetermined_gc_section_name=No
         "calculated_gc_start_time": gc_start_time,
     }
 
-    with open(config.section_params_path(gc_section_name), "w") as f:
+    with open(section_paths.section_params, "w") as f:
         json.dump(section_params, f, indent=4)
 
     # print(f"Binding {mario_section_name} <-> {gc_section_name} done.")
@@ -43,15 +45,16 @@ def process_section(mario_section_name, config, predetermined_gc_section_name=No
 
     # under our assumption, it shouldn't be possible to have more than one gc section for the same mario section or viceversa,
     # since they both start on ready
-    with open(config.game_dir / mario_section_name / "gc_section_backlink.json", "w") as f:
+    with open(section_paths.gcsec_backlink, "w") as f:
         json.dump({"gc_section_name": gc_section_name}, f, indent=4)
 
 def main(mario_section_names, config):
-    assert (config.game_dir / "gc_section_0").exists(), "This requires gc_extraction first"
+    paths = config.get_paths()
+    assert (paths.game_dir / "gc_section_0").exists(), "This requires gc_extraction first"
 
     # shortcut for the sake of automation: if there is an equal number of video and GC sections, assume they match sequentially and don't prompt the user.
     # a way for turning this assumption off is not implemented at the moment, this is left as an "exercise" if necessary.
-    gc_section_names = utils.get_section_names_to_do(config.game_dir, config.dir_names.gc_section_prefix, None)
+    gc_section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.gc_section_prefix, None)
     print(f"{len(mario_section_names)} {len(gc_section_names)}")
     if len(gc_section_names) == len(mario_section_names):
         for (mario_sn, gc_sn) in zip(mario_section_names, gc_section_names):

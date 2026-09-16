@@ -11,11 +11,16 @@ class CalibrationStudioJob:
     logger: any
     recalibrate: bool
 
+    # calibration happens one per section, so I'm not gonna care about the inefficiency of generating more pathsconfig objects rather than passing one from above
+    @property
+    def paths(self):
+        return self.config.get_paths(mario_section_name=self.section_name)
+
 def do_calibration_studio(job):
     calibrator = CalibrationStudio(job.frame, job.config)
     need_something = False
 
-    camera_calibration_fname = job.config.game_dir / job.section_name / "camera_calbration.npz"
+    camera_calibration_fname = job.paths.camera_calibration_npz
     loaded = calibrator.try_load(camera_calibration_fname)
     if loaded:
         job.logger.info("Camera calibration loaded from cache")

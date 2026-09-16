@@ -18,7 +18,8 @@ import tqdm
 import yaml
 
 from .detection import FrameIteratorFile, FrameIteratorStreaming, Detection
-from ..utils.config_loader import MarioConfig, VISION_TYPE_TO_CNN
+from ..utils.config.config_loader import MarioConfig, VISION_TYPE_TO_CNN
+from ..utils.config.paths import ROOT_DIR
 from ..utils.logger import setup_logger
 from ..utils.drawing import Drawer, field_image_hw
 from ..utils.team_info import NoTagLoader
@@ -60,6 +61,7 @@ class Tracking:
         """
         self.logger = setup_logger(__name__, level=log_level)
         self.config = config
+        self.paths = config.get_paths(mario_section_name=section_name)
         self.models = models
         self.match_tts = models.match_tts
         self.section_name = section_name
@@ -72,7 +74,7 @@ class Tracking:
         self.track_values: Dict[int, List[Detection]] = {}
         self.track_color_names: Dict[int, str] = {}
         self.frame_id = 0
-        self.working_files_tracker = files_module.TempWorkingFilesManager(config.section_dir(section_name))
+        self.working_files_tracker = files_module.TempWorkingFilesManager(self.paths.mario_section_dir)
 
         self.color_cnn = NullColorCNN()
         try:
@@ -82,23 +84,20 @@ class Tracking:
         except Exception as e:
             self.logger.warning(f"Could not load color CNN: {e}")
 
-        # Video capture and homography initialization
-        video_path = config.video_path(section_name)
-
         use_v12_only = "HSL" in config.field_type
         robot_nested_suppression = config.robot_nested_suppression
 
         try:
-            with open(config.gameinfo_path, 'r') as f:
+            with open(self.paths.gameinfo, 'r') as f:
                 self.gameinfo = yaml.load(f, Loader=NoTagLoader)
         except FileNotFoundError:
-            with open(config.data_dir / config.game_controller.default_gameinfo_fname, 'r') as f:
+            with open(self.paths.default_gameinfo, 'r') as f:
                 self.gameinfo = yaml.load(f, Loader=NoTagLoader)
 
         self.team_map = make_team_mapping_lr(self.gameinfo, side_hint, section_name, TEAM_NAMES_GO)
         self.team_map.dump(
             self.working_files_tracker.register_and_get_twf(
-                config.team_mapping_lr_path(section_name)
+                self.paths.team_mapping_lr
             ),
             indent=4,
         )
@@ -110,7 +109,7 @@ class Tracking:
                 time_range=config.time_range,
                 models=models,
                 calibration_frame_offset=calibration_timestamp_secs * config.processing.fps,
-                bytetrack_config=config.root_dir / config.models.bytetrack_config,
+                bytetrack_config=ROOT_DIR / config.models.bytetrack_config,
                 use_v12_only=use_v12_only,
                 robot_nested_suppression=robot_nested_suppression,
                 mario_config=config,
@@ -118,10 +117,10 @@ class Tracking:
             )
         else:
             self.video_iterator = FrameIteratorFile(
-                video_file=video_path,
+                video_file=self.paths.source_video,
                 models=models,
                 calibration_frame_offset=calibration_timestamp_secs * config.processing.fps,
-                bytetrack_config=config.root_dir / config.models.bytetrack_config,
+                bytetrack_config=ROOT_DIR / config.models.bytetrack_config,
                 use_v12_only=use_v12_only,
                 robot_nested_suppression=robot_nested_suppression,
                 mario_config=config,
@@ -137,7 +136,7 @@ class Tracking:
         self.eventproc = EventProcessor(
             config,
             self.working_files_tracker.register_and_get_twf(
-                config.section_dir(section_name) / "symbolic_events.jsonl"
+                self.paths.symbolic_events_jsonl
             ),
             self.team_map
         )
@@ -285,7 +284,7 @@ class Tracking:
             ) if self.config.features.write_csv else None,
             video_params=files_module.MultiWriterVideoParams(
                 path=str(self.working_files_tracker.register_and_get_twf(
-                    self.config.mario_annotated_video_path(self.section_name)
+                    self.paths.annotated_video
                 )),
                 fourcc=fourcc,
                 fps=fps,
@@ -294,7 +293,7 @@ class Tracking:
             ) if self.config.features.write_videos else None,
             plan_view_params=files_module.MultiWriterVideoParams(
                 path=str(self.working_files_tracker.register_and_get_twf(
-                    self.config.mario_planview_path(self.section_name)
+                    self.paths.planview_video
                 )),
                 fourcc=fourcc,
                 fps=fps,

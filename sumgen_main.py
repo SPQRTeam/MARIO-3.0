@@ -34,10 +34,11 @@ if args.halp:
     exit(0)
 
 config = utils.MarioConfig.from_yaml(args)
-section_names = utils.get_section_names_to_do(config.game_dir, config.dir_names.mario_section_prefix, args.sections)
+paths = config.get_paths()
+section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
 
 for sn in section_names:
-    (config.section_dir(sn) / "sumgen_output").mkdir(exist_ok=True)
+    config.get_paths(mario_section_name=sn).sumgen_output_dir.mkdir(exist_ok=True)
 
 if STEP_GCEXTR in args.steps:
     import src.post_process.summary_generation.gc_extraction as step_gc

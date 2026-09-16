@@ -4,7 +4,7 @@ import shutil
 import subprocess
 
 import src.utils as utils
-from src.utils.config_loader import ROOT_DIR
+from src.utils.config.paths import ROOT_DIR
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

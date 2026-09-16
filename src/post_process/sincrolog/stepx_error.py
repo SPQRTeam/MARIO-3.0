@@ -106,18 +106,19 @@ class GlobalStats:
 
 def main(section_name, time_limit, config):
 
-    output_dir = config.sincrolog_output_path(section_name)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    paths = config.get_paths(gc_section_name=section_name)
 
-    section_params_path = config.section_params_path(section_name)
-    with open(section_params_path, 'r') as f:
+    paths.sincrolog_output_dir.mkdir(parents=True, exist_ok=True)
+
+    with open(paths.section_params, 'r') as f:
         params = json.load(f)
 
-    team_map = utils.extract_team_mapping_from_yaml(config.gameinfo_path)
+    paths = config.get_paths(gc_section_name=section_name, mario_section_name=params["manual"]["mario_half_name"])
 
-    mario_csv_path = config.mario_post_step2_path(params["manual"]["mario_half_name"])
+    team_map = utils.extract_team_mapping_from_yaml(paths.gameinfo)
+
     mario_df = pd.read_csv(
-        mario_csv_path,
+        paths.mario_post_step2_csv,
         converters={
             'bounding_box_in_image_space': ast.literal_eval,
             'color': ast.literal_eval,
@@ -127,12 +128,11 @@ def main(section_name, time_limit, config):
     mario_df["videotime"] = (mario_df.frame / config.processing.fps) * 1000
     mario_df["gametime"] = mario_df.videotime - params["manual"]["mario_start_time"]
 
-    input_gc_path = config.gc_csv_post_step3_path(section_name)
-    gc_fixed_penalties = pd.read_csv(input_gc_path)
+    gc_fixed_penalties = pd.read_csv(paths.gc_post_step3_csv)
 
     errors = calculate_errors(gc_fixed_penalties, mario_df, time_limit, team_map, config)
 
-    error_dir = mario_csv_path.parent / "error"
+    error_dir = paths.mario_section_dir / "error"
     error_dir.mkdir(exist_ok=True)
     rebf_array = np.array(errors)
     np.savetxt(error_dir / f"by_frame_robotsonly_{section_name[-2:]}.txt", rebf_array)

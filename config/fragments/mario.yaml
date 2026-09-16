@@ -1,26 +1,7 @@
 # Core MARIO: video paths, models, calibration, features, processing, logging
 
-video:
-  game_history_fname: "game_history.yaml"
-
-  video_fname: "video.mp4"
-  output_fname: "output.mp4"
-  output_commentary_audio_fname: "output_commentary.wav"
-  output_clean_with_commentary_fname: "output_clean_commentary.mp4"
-  output_planview_fname: "output_planview.mp4"
-  output_csv_fname: "output.csv"
-  robot_pics_dir: "robot_pics"
-
-game_controller:
-  tcm_dir_relative: "../GC Logs/GameController/bin"
-  gc_log_fname: "gc.yaml"
-  gc_csv_fname: "gc.csv"
-  gameinfo_fname: "gameinfo.yaml"
-  default_gameinfo_fname: "default_gameinfo.yaml"
-  team_mapping_lr_fname: "teams.json"
-
 dir_names:
-  data: "data"
+  game_history_fname: "game_history.yaml"  # this is the one name that can't be brought into paths, due to dependencies. It's in the root anyway.
   gc_section_prefix: "gc_section_"
   mario_section_prefix: "mario_"
 

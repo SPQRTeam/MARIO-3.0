@@ -216,23 +216,21 @@ def local_to_global(robot_x, robot_y, robot_theta, local_x, local_y):
 
 def main(section_name, config):
 
-    gc_csv_path = config.gc_csv_raw_path(section_name)
-    gc_df = pd.read_csv(gc_csv_path)
+    paths = config.get_paths(gc_section_name=section_name)
+    gc_df = pd.read_csv(paths.gc_raw_csv)
 
-    section_params_path = config.section_params_path(section_name)
-
-    if not section_params_path.exists():
-        with open(section_params_path, 'w') as f:
+    if not paths.section_params.exists():
+        with open(paths.section_params, 'w') as f:
             f.write("{\n\n}")
-        print(f"{section_params_path.relative_to(config.game_dir)} does not exist! Created it for convenience, but do fill it!")
+        print(f"{paths.section_params.relative_to(paths.game_dir)} does not exist! Created it for convenience, but do fill it!")
         return
 
-    with open(section_params_path, 'r') as f:
+    with open(paths.section_params, 'r') as f:
         params = json.load(f)
     gc_flip_team = params["manual"]["gc_flip_team"]
 
-    mario_csv_path = config.mario_post_step2_path(params["manual"]["mario_half_name"])
-    mario_df = pd.read_csv(mario_csv_path)
+    paths = config.get_paths(gc_section_name=section_name, mario_section_name=params["manual"]["mario_half_name"])
+    mario_df = pd.read_csv(paths.mario_post_step2_csv)
 
     mario_df["videotime"] = (mario_df.frame / config.processing.fps) * 1000
     # gc_validity_start_time is read from the configuration json file
@@ -252,7 +250,7 @@ def main(section_name, config):
             gc_df.loc[gc_df['team'] == gc_flip_team, ['x', 'y']] *= -1
         
         params['calculated_gc_start_time'] = float(gc_start_time)
-        with open(section_params_path, 'w', encoding='utf-8') as f:
+        with open(paths.section_params, 'w', encoding='utf-8') as f:
             json.dump(params, f, indent=2, ensure_ascii=False)
 
         # APPLY ROBOT EXCLUSIONS (BEFORE crash detection)
@@ -264,6 +262,5 @@ def main(section_name, config):
         final_corrected_gc_df = crash_condition(gc_df, max_absence_time=20000)
         final_corrected_gc_df = filter_gc_after_penalty(final_corrected_gc_df, min_movement=500)
         final_corrected_gc_df.apply(convert_row, axis = 1)
-    gc_penalties_path = config.gc_csv_post_step3_path(section_name)
-    print(f"[CONFIG] Saving output to: {gc_penalties_path}")
-    final_corrected_gc_df.to_csv(gc_penalties_path, index=False)
+    print(f"[CONFIG] Saving output to: {paths.gc_post_step3_csv}")
+    final_corrected_gc_df.to_csv(paths.gc_post_step3_csv, index=False)
