@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Label robot colors</title>
+  <style>
+    :root {
+      --bg: #121418;
+      --panel: #1a1d24;
+      --text: #e8eaef;
+      --muted: #8b929e;
+      --accent: #3d7dff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, Segoe UI, Roboto, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+    }
+    header {
+      padding: 12px 20px; background: var(--panel); border-bottom: 1px solid #2a2f3a;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+    }
+    header h1 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    .meta { color: var(--muted); font-size: 0.9rem; }
+    main { max-width: 920px; margin: 0 auto; padding: 20px; }
+    .crop-wrap {
+      background: #000; border-radius: 8px; overflow: hidden;
+      border: 1px solid #2a2f3a; margin-bottom: 16px;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 280px;
+    }
+    .crop-wrap img {
+      max-width: 100%; max-height: 70vh; object-fit: contain; display: block;
+    }
+    .hint {
+      margin-bottom: 12px; padding: 10px 14px; background: var(--panel);
+      border-radius: 6px; border: 1px solid #2a2f3a; font-size: 0.95rem;
+    }
+    .hint-bar {
+      height: 22px; border-radius: 4px; margin-top: 8px;
+      background: #333; overflow: hidden;
+    }
+    .hint-bar > div { height: 100%; transition: width 0.15s; }
+    .colors {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+    }
+    .colors button {
+      flex: 1; min-width: 100px; padding: 14px 10px; border: none; border-radius: 6px;
+      font-weight: 600; cursor: pointer; color: #111;
+    }
+    .tools {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+    }
+    .tools button, .tools a.btn {
+      padding: 10px 14px; border-radius: 6px; border: 1px solid #3a4556;
+      background: #252a34; color: var(--text); cursor: pointer; font-size: 0.9rem;
+      text-decoration: none; display: inline-block;
+    }
+    .tools button:hover, .tools a.btn:hover { background: #323945; }
+    .tools button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tools button.danger { border-color: #664; }
+    .msg { padding: 10px; border-radius: 6px; background: #2a2520; color: #f0c49a; margin-bottom: 12px; font-size: 0.9rem; }
+    .msg.error { background: #301818; color: #faa; }
+    .msg.ok { background: #1a2820; color: #9d9; }
+    .done { text-align: center; padding: 40px; font-size: 1.2rem; color: var(--muted); }
+    kbd {
+      display: inline-block; padding: 2px 6px; border-radius: 4px;
+      background: #2a2f3a; font-size: 0.8rem; font-family: inherit;
+    }
+    footer { padding: 16px; color: var(--muted); font-size: 0.8rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Etichettatura colori</h1>
+    <span class="meta" id="meta"></span>
+  </header>
+  <main>
+    <div id="flash"></div>
+    <div id="reviewBanner" class="msg" style="display:none"></div>
+    <div id="done" class="done" style="display:none">Tutte le immagini in coda sono etichettate.</div>
+    <div id="panel">
+      <div class="crop-wrap"><img id="crop" alt="crop" /></div>
+      <div id="savedLabel" class="hint" style="display:none"></div>
+      <div id="hintBox" class="hint" style="display:none"></div>
+      <div class="colors" id="colors"></div>
+      <div class="tools">
+        <button type="button" class="primary" id="btnConfirm" disabled>Conferma hint (Spazio)</button>
+        <button type="button" id="btnSkip">Salta <kbd>n</kbd></button>
+        <button type="button" id="btnBack">Indietro <kbd>z</kbd></button>
+        <button type="button" id="btnTrain">Train <kbd>t</kbd></button>
+        <button type="button" id="btnAuto">Auto-label + train <kbd>l</kbd></button>
+        <button type="button" id="btnSort">Ordina resto <kbd>s</kbd></button>
+      </div>
+      <p class="meta">Tasti rapidi: prima lettera del colore · <kbd>Spazio</kbd> conferma hint · <kbd>q</kbd> esci (chiudi tab)</p>
+    </div>
+  </main>
+  <footer>Locale — non esporre su Internet senza protezione.</footer>
+  <script>
+    const cropEl = document.getElementById("crop");
+    const metaEl = document.getElementById("meta");
+    const colorsEl = document.getElementById("colors");
+    const hintBox = document.getElementById("hintBox");
+    const flashEl = document.getElementById("flash");
+    const reviewBannerEl = document.getElementById("reviewBanner");
+    const savedLabelEl = document.getElementById("savedLabel");
+    const panel = document.getElementById("panel");
+    const doneEl = document.getElementById("done");
+
+    const COLOR_BGR = {
+      red: "#dc0000", blue: "#0066dd", yellow: "#dddd00", white: "#f0f0f0",
+      green: "#00aa00", black: "#333", orange: "#ff8800", purple: "#8844aa",
+      gray: "#888", unknown: "#666666",
+    };
+
+    function flash(msg, kind) {
+      flashEl.innerHTML = msg ? `<div class="msg ${kind || ""}">${msg}</div>` : "";
+    }
+
+    async function api(path, body) {
+      const r = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: body ? JSON.stringify(body) : "{}",
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || r.statusText);
+      return j;
+    }
+
+    function renderColors(colors) {
+      colorsEl.innerHTML = "";
+      colors.forEach((c) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = `[${c[0]}] ${c}`;
+        b.style.background = COLOR_BGR[c] || "#888";
+        b.style.color = (c === "yellow" || c === "white") ? "#111" : "#fff";
+        b.addEventListener("click", () => label(c));
+        colorsEl.appendChild(b);
+      });
+    }
+
+    async function refresh() {
+      flash("");
+      const st = await fetch("/api/state").then((r) => r.json());
+      if (st.error) { flash(st.error, "error"); return; }
+      document.getElementById("btnConfirm").disabled = !st.hint;
+      if (st.review_banner) {
+        reviewBannerEl.style.display = "block";
+        reviewBannerEl.textContent = st.review_banner;
+      } else {
+        reviewBannerEl.style.display = "none";
+      }
+      if (st.done) {
+        panel.style.display = "none";
+        doneEl.style.display = "block";
+        doneEl.textContent = st.review_mode
+          ? "Fine revisione."
+          : "Tutte le immagini in coda sono etichettate.";
+        return;
+      }
+      doneEl.style.display = "none";
+      panel.style.display = "block";
+      if (st.saved_label) {
+        savedLabelEl.style.display = "block";
+        let sl =
+          "Etichetta in <code>labels.json</code>: <strong>" +
+          st.saved_label +
+          "</strong>";
+        if (st.hint_label_mismatch && st.hint) {
+          sl +=
+            " — <span style=\"color:#fa0\">Mismatch</span> con hint <strong>" +
+            st.hint.color +
+            "</strong> (" +
+            (st.hint.conf * 100).toFixed(0) +
+            "%): probabile errore autolabel.";
+          savedLabelEl.style.border = "1px solid #c60";
+          savedLabelEl.style.background = "#2a2218";
+        } else {
+          savedLabelEl.style.border = "1px solid #2a2f3a";
+          savedLabelEl.style.background = "var(--panel)";
+        }
+        savedLabelEl.innerHTML = sl;
+      } else {
+        savedLabelEl.style.display = "none";
+      }
+      metaEl.textContent = `${st.index + 1}/${st.total} · etichettate: ${st.n_labeled} · ${st.filename}`;
+      cropEl.src = st.image_url + "?t=" + Date.now();
+      if (st.test_acc != null) {
+        metaEl.textContent += ` · test ${(st.test_acc * 100).toFixed(0)}%`;
+      }
+      renderColors(st.colors);
+      if (st.hint) {
+        hintBox.style.display = "block";
+        const pct = (st.hint.conf * 100).toFixed(0);
+        const col = COLOR_BGR[st.hint.color] || "#888";
+        hintBox.innerHTML = `Hint: <strong>${st.hint.color}</strong> ${pct}%`;
+        hintBox.innerHTML += `<div class="hint-bar"><div style="width:${pct}%;background:${col}"></div></div>`;
+      } else {
+        hintBox.style.display = "none";
+      }
+    }
+
+    async function label(color) {
+      try {
+        const j = await api("/api/label", { color });
+        if (j.message) flash(j.message, "ok");
+        await refresh();
+      } catch (e) { flash(e.message, "error"); }
+    }
+
+    document.getElementById("btnConfirm").addEventListener("click", async () => {
+      try {
+        await api("/api/confirm_hint", {});
+        await refresh();
+      } catch (e) { flash(e.message, "error"); }
+    });
+    document.getElementById("btnSkip").addEventListener("click", async () => {
+      try { await api("/api/skip", {}); await refresh(); } catch (e) { flash(e.message, "error"); }
+    });
+    document.getElementById("btnBack").addEventListener("click", async () => {
+      try { await api("/api/back", {}); await refresh(); } catch (e) { flash(e.message, "error"); }
+    });
+    document.getElementById("btnTrain").addEventListener("click", async () => {
+      flash("Training in corso…", "");
+      try {
+        const j = await api("/api/train", {});
+        flash(j.message || "Training completato.", "ok");
+        await refresh();
+      } catch (e) { flash(e.message, "error"); }
+    });
+    document.getElementById("btnAuto").addEventListener("click", async () => {
+      if (!confirm("Auto-etichettare tutte le immagini ancora senza label e poi train su tutto?")) return;
+      flash("Auto-label + training… può richiedere diversi minuti.", "");
+      try {
+        const j = await api("/api/autolabel_train", {});
+        flash(j.message || "Fatto.", "ok");
+        await refresh();
+      } catch (e) { flash(e.message, "error"); }
+    });
+    document.getElementById("btnSort").addEventListener("click", async () => {
+      flash("Ordinamento per confidenza…", "");
+      try {
+        const j = await api("/api/sort", {});
+        flash(j.message || "Ordinato.", "ok");
+        await refresh();
+      } catch (e) { flash(e.message, "error"); }
+    });
+
+    document.addEventListener("keydown", (ev) => {
+      if (ev.target.tagName === "INPUT") return;
+      const k = ev.key.toLowerCase();
+      if (k === " " && document.getElementById("btnConfirm").disabled === false) {
+        ev.preventDefault();
+        document.getElementById("btnConfirm").click();
+        return;
+      }
+      if (k === "n") { document.getElementById("btnSkip").click(); return; }
+      if (k === "z") { document.getElementById("btnBack").click(); return; }
+      if (k === "t") { document.getElementById("btnTrain").click(); return; }
+      if (k === "l") { document.getElementById("btnAuto").click(); return; }
+      if (k === "s") { document.getElementById("btnSort").click(); return; }
+      // first letter → color (fetch state for colors list)
+      fetch("/api/state").then((r) => r.json()).then((st) => {
+        if (!st.colors) return;
+        for (const c of st.colors) {
+          if (c[0].toLowerCase() === k) { label(c); break; }
+        }
+      });
+    });
+
+    refresh().catch((e) => flash(String(e), "error"));
+  </script>
+</body>
+</html>

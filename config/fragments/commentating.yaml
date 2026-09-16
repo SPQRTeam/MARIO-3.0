@@ -1,0 +1,115 @@
+# --- Speech / OCR (events_commentary, TTS) ---
+commentating:
+  general_comment_enabled: true
+
+  # Secondo ruolo LLM su strike (palla in movimento): tiro vs passaggio + squadra; interrompe TTS e prefisso "Ma attenzione…".
+  ball_kinetics_llm_commentary_enabled: true
+  ball_kinetics_llm_context_frames: 15
+  ball_kinetics_llm_language: en
+  ball_kinetics_attention_prefix: "Heads up!"
+  # Non duplicare strike/shot/pass deterministici quando parte il path kinetics.
+  ball_kinetics_llm_skip_deterministic_events: true
+  # Anti-spam: se nell'ultimo N secondi è già stato emesso un commento ball-kinetics
+  # con STESSA squadra e STESSA classificazione (es. 3 tiri B-Human in 2s), salta.
+  # Riduce le interruzioni TTS ravvicinate su azioni ripetute. 0 = disabilitato.
+  ball_kinetics_llm_repeat_suppress_sec: 3.0
+
+  # Raffinare gli hint geometrici (robot–palla) con LLM + estratto CSV (±N frame nel log).
+  geometry_llm_commentary_enabled: false
+  geometry_llm_context_frames: 5
+  geometry_llm_language: en
+  # Se true: non pronunciare la riga fissa "robot–ball strike" quando il path LLM è partito.
+  geometry_llm_skip_deterministic_ball_strike: true
+
+  # Nessun strike/evento: LLM su finestra CSV lunga + ultime battute (memoria) per telecronaca / sintesi.
+  periodic_llm_commentary_enabled: true
+  periodic_llm_interval_sec: 40.0
+  periodic_llm_min_gap_after_geometry_sec: 40.0
+  # Evita periodic vicini ad azioni prioritarie (goal/strike/shot/pass) per non parlare "in ritardo".
+  periodic_llm_min_gap_after_priority_event_frames: 600
+  periodic_llm_tail_frames: 36
+  periodic_llm_stride: 4
+  periodic_llm_history_turns: 4
+  # Frames di grazia dopo l'ultima palla vista: entro questi frame la periodic usa l'intervallo normale.
+  # Oltre, usa intervallo x2 ma parla comunque (rompe il silenzio durante pause di gioco).
+  periodic_llm_no_ball_grace_frames: 90
+
+  # Prefer LLM-based goal reaction (score/history aware) over fixed deterministic line.
+  deterministic_goal_speech: false
+  goal_llm_commentary_enabled: true
+  post_goal_kickoff_commentary_enabled: true
+  post_goal_wait_window_frames: 220
+  post_goal_wait_comment_cooldown_sec: 8.0
+  # Frase unica robot–palla (sostituisce shot/pass per il commento deterministico).
+  deterministic_ball_strike_speech: false
+  deterministic_shot_speech: true
+  deterministic_pass_speech: true
+
+  # Se true: cifra sinistra sul tabellone = squadra che difende la porta a sinistra in campo.
+  ocr_left_digit_tracks_left_field_team: true
+  # Mostra le finestre OpenCV "OCR left/right" durante la lettura punteggio.
+  show_debug_ocr: false
+
+  # Coordinate pixel del crop OCR [y1, y2, x1, x2] nella risoluzione nativa del video.
+  # Usa show_ball_debug: true per trovare le coordinate giuste visualizzando i crop.
+  # Default calibrati su risoluzione 1920×1080 del video RoboCup finale.
+  ocr_crop_left: [971, 1022, 851, 890]
+  ocr_crop_right: [970, 1022, 1030, 1070]
+
+  # --- Ball motion (analyze_ball.py): logica semplificata ---
+  # Finestra: ultimi N campioni **con palla** (primo→ultimo = spostamento + velocità media).
+  ball_window_frames: 10
+
+  # Traccia: ultima posizione palla in campo prima di occlusione / gap; al rientro si usa
+  # last_seen → posizione attuale (max con finestra) per distanza e velocità media.
+  ball_trace_min_gap_frames: 2
+  max_ball_trace_gap_frames: 180
+
+  # Possesso (inizio finestra): robot più vicino al punto palla più vecchio, entro questa distanza (mm).
+  possession_max_dist_mm: 900.0
+  # Overlay video (cerchio palla): niente colore squadra se troppo lontano / ambiguo (es. centrocampo a inizio).
+  # Distanza campo ball–robot; sotto = nessun possesso (palla colore default).
+  possession_display_max_field_mm: 650.0
+  # Distanza in pixel (centro bbox palla – piede robot); sopra = neutro. 0 = disabilita controllo.
+  possession_display_max_image_px: 165.0
+  # Se il 2° robot in immagine è quasi come il 1° (pixel), considera possesso “conteso” → neutro.
+  possession_display_contested_margin_px: 30.0
+  # Match maglia vs left_team_color / right_team_color (somma quadrati BGR); sopra = squadra ignota.
+  possession_color_match_max_sq: 12000.0
+
+  # Direzione pass: vettore spostamento (inizio→fine) allineato verso un compagno (coseno ≥ soglia).
+  pass_direction_min_cos: 0.38
+  # Direzione tiro: allineato verso la porta avversaria (coseno ≥) + progresso minimo lungo X (mm).
+  shot_direction_min_cos: 0.32
+  shot_min_goal_progress_mm: 150.0
+
+  # Kick rilevato (rising edge): spostamento e velocità efficaci (finestra ∪ traccia).
+  min_kick_displacement_mm: 350.0
+  min_kick_speed_mms: 200.0
+
+  # Tra un evento (tiro o passaggio) e il successivo (secondi).
+  motion_event_cooldown: 3.0
+
+  # Quando la palla riappare dopo un gap >= N frame, il motion precedente è terminato:
+  # riarma il detector e usa un cooldown ridotto (cooldown * factor) per quell'evento.
+  # Evita che una spazzata a frame 543 + tiro a frame 566 (gap 10fr = 0.77s) vengano
+  # entrambi soppressi dal cooldown standard di 3.0s.
+  ball_gap_rearm_frames: 5
+  ball_gap_cooldown_factor: 0.25
+
+  # La palla deve essere osservata "ferma" (velocità < metà soglia kick) per almeno N frame
+  # consecutivi prima che venga triggerato un nuovo kick. Evita che la stessa azione continua
+  # (es. palla che rotola dopo una spazzata) venga letta come più tiri/spazzate successivi.
+  # 18 frame ≈ 0.6 s @30 fps.
+  min_idle_frames_between_kicks: 5
+
+  # Guardia anti-falso-evento quando la palla viene riposizionata da arbitro/umano:
+  # se il movimento sembra "kick" ma nessun robot è vicino né all'inizio né alla fine
+  # della traiettoria (entro questa distanza), NON emettere evento di squadra.
+  external_reposition_max_robot_dist_mm: 1200.0
+
+  impossible_speed: 14500.0
+
+  # Solo pass/tiro sopra; inferenza su palla persa disabilitata di default.
+  ball_loss_shot_infer_enabled: false
+  ball_loss_shot_grace_frames: 18

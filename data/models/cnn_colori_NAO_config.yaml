@@ -1,0 +1,21 @@
+best_val_acc: 0.9056603773584906
+class_names:
+- black
+- blue
+- green
+- red
+idx2label:
+  0: black
+  1: blue
+  2: green
+  3: red
+image_size:
+- 28
+- 28
+in_channels: 3
+model_path: cnn_colori_NAO_best.pth
+num_classes: 4
+test_acc: 0.8727272727272727
+test_size: 55
+train_size: 250
+val_size: 53

@@ -1,0 +1,40 @@
+mario_postprocessing:
+  min_robot_persistence_secs: 0.5
+  max_secs_for_moving_ball_interp: 1
+  max_secs_for_still_ball_interp: 10
+  max_field_dist_for_still_ball_interp: 100
+  max_frame_lookup_for_velocity: 5
+  trackcolor_window_length_secs: 2
+  color_ambiguity_factor: 0.75
+  neotrack_unambiguous_length_secs: 3.3
+  mario_post_step2_fname: "mario_processed.csv"
+
+sincrolog:
+  section_params_fname: "section_params.json"
+
+  distance_threshold_initial: 1050
+
+  future_analysis_window_ms: 8000
+  future_sample_rate: 30
+
+  current_distance_weight: 1.0
+  max_assignment_cost: 700
+
+  max_search_radius: 1000
+  max_nao_speed: 300
+
+  max_ball_age: 2.0
+  max_ball_jump: 600
+
+  distance_break_threshold_max: 500
+  distance_better_factor: 0.65
+
+  flip_dist_threshold: 550
+
+  output_dirname: "orientazioniReduxOutput"
+  gc_csv_post_step3_fname: "gc_processed.csv"
+  merged_csv_fname: "merged.csv"
+  breaks_csv_fname: "assignment_breaks.csv"
+
+sumgen:
+  game_state_fname: "game_state.csv"

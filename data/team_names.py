@@ -1,0 +1,17 @@
+# These are from German Open 2026.
+TEAM_NAMES_GO = {
+  0: "Invisibles",
+  3: "Bembelbots",
+  4: "Berlin United",
+  5: "B-Human",
+  6: "Hamburg Bit-Bots",
+  8: "whIRLwind Amsterdam",
+  9: "WF Wolves",
+  12: "Ruhrbot Devils",
+  14: "HTWK Robots",
+  17: "ZJUDancer",
+  19: "SPQR",
+  24: "HULKs",
+  50: "R-ZWEI KICKERS",
+  70: "B-Team"
+}

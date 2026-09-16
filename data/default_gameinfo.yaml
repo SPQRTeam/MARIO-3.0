@@ -1,0 +1,18 @@
+# Only usable by MARIO (the tracker), b/c non-postprocessing people also use it.
+# The postprocessing code still expects the proper gameinfo.yaml generated in step 1 (for now, at least)
+
+kickOffSide: away
+long: false
+sideMapping: homeDefendsRightGoal
+teams:
+  away:
+    fieldPlayerColor: blue
+    goalkeeperColor: blue
+    number: 14
+  home:
+    fieldPlayerColor: red
+    goalkeeperColor: red
+    number: 5
+test:
+  noDelay: false
+  penaltyShootout: false

@@ -1,0 +1,25 @@
+{
+  "manual": {
+    "mario_half_name": "mario_A",
+    "gc_validity_start_time": 0,
+    "mario_start_time": 0,
+    "gc_flip_team": 3,
+    "robot_exclusions": [
+      {
+        "team_number": 3,
+        "player_number": 7,
+        "start_time": 0,
+        "end_time": 326000,
+        "reason": "Completely delocalized"
+      },
+      {
+        "team_number": 13,
+        "player_number": 2,
+        "start_time": 0,
+        "end_time": 105000,
+        "reason": "Completely delocalized"
+      }
+    ]
+  },
+  "calculated_gc_start_time": 75046.0
+}

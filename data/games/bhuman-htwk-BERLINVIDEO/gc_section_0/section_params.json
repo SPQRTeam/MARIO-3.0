@@ -1,0 +1,9 @@
+{
+  "manual": {
+    "mario_half_name": "mario_A",
+    "gc_validity_start_time": 43600.0,
+    "mario_start_time": 43000,
+    "gc_flip_team": 13
+  },
+  "calculated_gc_start_time": 43794.0
+}

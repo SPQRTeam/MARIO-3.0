@@ -1,0 +1,6 @@
+# Root config: merges the fragments below into one flat MARIO config (see MarioConfig.from_yaml).
+
+_merge_files:
+  - config/fragments/mario.yaml
+  - config/fragments/commentating.yaml
+  - config/fragments/post_process.yaml

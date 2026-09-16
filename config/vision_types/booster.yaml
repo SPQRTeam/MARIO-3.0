@@ -1,0 +1,8 @@
+# for now this is for both T1 and K1
+
+# keeping old variable names to avoid a complete refactor at this stage
+yolo_v8: "data/models/best_yolov8.pt"  # unused
+yolo_v12: "data/models/yolo12_sam3.pt"  # for robots and ball
+use_v12_only: true  # the v12 for the boosters also recognizes the ball well
+
+color_classifier_weights: "data/models/color_classifier_active.pth"

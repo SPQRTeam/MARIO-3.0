@@ -1,0 +1,14 @@
+kickOffSide: home
+sideMapping: homeDefendsLeftGoal
+teams:
+  away:
+    fieldPlayerColor: blue
+    goalkeeperColor: yellow
+    number: 14
+  home:
+    fieldPlayerColor: red
+    goalkeeperColor: white
+    number: 5
+test:
+  noDelay: false
+  penaltyShootout: false

@@ -1,0 +1,107 @@
+# Core MARIO: video paths, models, calibration, features, processing, logging
+
+video:
+  game_history_fname: "game_history.yaml"
+
+  video_fname: "video.mp4"
+  output_fname: "output.mp4"
+  output_commentary_audio_fname: "output_commentary.wav"
+  output_clean_with_commentary_fname: "output_clean_commentary.mp4"
+  output_planview_fname: "output_planview.mp4"
+  output_csv_fname: "output.csv"
+  robot_pics_dir: "robot_pics"
+
+game_controller:
+  tcm_dir_relative: "../GC Logs/GameController/bin"
+  gc_log_fname: "gc.yaml"
+  gc_csv_fname: "gc.csv"
+  gameinfo_fname: "gameinfo.yaml"
+  default_gameinfo_fname: "default_gameinfo.yaml"
+  team_mapping_lr_fname: "teams.json"
+
+dir_names:
+  data: "data"
+  gc_section_prefix: "gc_section_"
+  mario_section_prefix: "mario_"
+
+models:
+  # some models have been moved to vision_types
+  bytetrack_config: "config/tracking/bytetrack.yaml"
+  ocr_vlm_name: "glm-ocr:latest"
+  # Testo per commento (detection score line, general_commentary): "ollama" | "openai"
+  commentary_llm_backend: openai
+  llm_model: "llama3.2"
+  # Se commentary_llm_backend: openai — pip install openai; chiave: openai_api_key, OPENAI_API_KEY, o api.txt in root
+  openai_model: "gemma3:4b"
+  openai_base_url: "http://localhost:11434/v1"
+  openai_api_key: ollama
+
+# Drop extra robot boxes on the same player (e.g. torso vs full body)
+# This avoid to have multiple detection for the same robot
+robot_nested_suppression:
+  enabled: true
+  min_overlap_of_smaller: 0.5
+  max_area_ratio: 0.85
+
+tts:
+  enabled: false
+  # "edge" (default) | "qwen" (voice clone, slower but more natural)
+  backend: edge
+  # Short name → Edge neural voice; language follows commentating.geometry_llm_language
+  # (diego → it-IT-Diego / en-US-Guy). Override with a full id, e.g. en-GB-RyanNeural.
+  voice: diego
+
+  speed: 1.2
+  use_edge_tts: false
+  # Omitted: auto = it if commentary is Italian, en if English. Set to force offline gTTS.
+  gtts_lang: en
+  min_interval_sec: 6.5
+  # Export final clean video + commentary audio mux (requires ffmpeg).
+  export_clean_video_with_commentary: true
+  # Keep per-line wav snippets used to build commentary mix.
+  keep_commentary_audio_segments: true
+
+features:
+  colors: [red, blue, unknown]
+  cnn_abstain_below_confidence: 0.8
+  write_csv: true
+  write_videos: true
+  # Save raw resized camera stream without boxes/overlays.
+  save_yolo_dataset: false
+  show_preview: true
+  # Offload remap, annotation, CSV/video write, OpenCV windows to a background thread so the main
+  # thread stays on YOLO + homography + CNN. Queue applies backpressure if encoding/UI lags (no dropped frames).
+  async_output_pipeline: true
+  async_output_queue_size: 4
+  # Per-frame timing to stdout/log (detector vs remap/annotate/UI). See [timing] lines.
+  debug_frame_timings: false
+  # Log every N frames (1 = every frame; 30 avoids flooding).
+  debug_timing_every_n_frames: 30
+  # Second OpenCV window: plan view + ball trail + speed (field mm/s).
+  show_ball_debug: true
+  ball_debug_trail_frames: 90
+  # Drop ball detections whose projected field position is outside the pitch (mm). You have to decide this according to your calibration.
+  reject_ball_outside_field: true
+  # Widen the playable rectangle by this many mm before rejecting (0 = strict).
+  ball_inside_field_margin_mm: 0
+  commentate: true
+  # OpenCV window "MARIO Debug": event, last commentary line, ball possession (nearest robot + team). Same thread as other GUI when async_output_pipeline is on.
+  show_commentary_window: true
+  # Rolling median field (mm) + majority BGR per track id — used for overlays, CSV, and commentator.
+  temporal_smooth_enabled: true
+  temporal_smooth_position_window: 4
+  temporal_smooth_color_window: 40
+
+processing:
+  output_frame_height: 720
+  fps: 30
+  max_tracks_display: 15
+  start_frame: 0
+
+drawing:
+  warped_field_segment_resolution: 32
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: null

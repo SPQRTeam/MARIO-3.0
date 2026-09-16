@@ -1,0 +1,7 @@
+# keeping old variable names to avoid a complete refactor at this stage
+yolo_v8: "data/models/best_yolov8.pt"  # for the ball (the new yolov12 we trained worked better on naos but worse on the spl ball)
+yolo_v12: "data/models/best_yolov12.pt"  # for the robot (somehow was worse for the ball)
+use_v12_only: false
+
+color_classifier_weights: "data/models/cnn_colori_NAO_best.pth"
+color_classifier_config: "data/models/cnn_colori_NAO_config.yaml"
