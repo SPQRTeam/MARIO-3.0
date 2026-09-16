@@ -55,6 +55,7 @@ def main(mario_section_names, config):
     # shortcut for the sake of automation: if there is an equal number of video and GC sections, assume they match sequentially and don't prompt the user.
     # a way for turning this assumption off is not implemented at the moment, this is left as an "exercise" if necessary.
     gc_section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.gc_section_prefix, None)
+    gc_section_names.sort()
     print(f"{len(mario_section_names)} {len(gc_section_names)}")
     if len(gc_section_names) == len(mario_section_names):
         for (mario_sn, gc_sn) in zip(mario_section_names, gc_section_names):

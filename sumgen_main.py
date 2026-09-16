@@ -36,6 +36,7 @@ if args.halp:
 config = utils.MarioConfig.from_yaml(args)
 paths = config.get_paths()
 section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
+section_names.sort()
 
 for sn in section_names:
     config.get_paths(mario_section_name=sn).sumgen_output_dir.mkdir(exist_ok=True)
