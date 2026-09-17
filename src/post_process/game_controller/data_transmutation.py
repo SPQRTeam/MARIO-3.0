@@ -135,6 +135,8 @@ class DataTransmuter:
         self.homeness[self.gameinfo.teams.away.number] = "away"
 
     def on_game_state(self, item):
+        # NOTE: if secsremaining is needed again, it can be found here, under the key primaryTimer->remaining->[0].
+        #       maybe a constructor for !started will be required?
         csvable = munch.Munch(
             gctime=gc_utils.timestamp_to_float(gc_utils.timestamp_diff(item.timestamp, self.current_section.start_timestamp)),
         )

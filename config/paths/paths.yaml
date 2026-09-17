@@ -43,7 +43,6 @@ legacy_tcm_dir: "$ROOT/../GC Logs/GameController/bin"  # this is only used for t
 # sumgen stuff follows
 
 game_state_csv: "$gc_section_dir/game_state.csv"
-gc_collective_csv: "$gc_section_dir/gc_collective.csv"  # TODO marked for deletion, let's just use gc.csv
 gc_individual_dir: "$gc_section_dir/gc_individual"
 gc_events_csv: "$gc_section_dir/events_from_gc.csv"
 gc_penalties_csv: "$gc_section_dir/penalties.csv"

@@ -19,7 +19,7 @@ def process_section(mario_section_name, config, predetermined_gc_section_name=No
 
     section_paths = config.get_paths(mario_section_name=mario_section_name, gc_section_name=gc_section_name)
 
-    gc_df = pd.read_csv(section_paths.gc_collective_csv)
+    gc_df = pd.read_csv(section_paths.gc_raw_csv)
 
     gc_start_time = float(find_gc_start_time(gc_df, 0))
 

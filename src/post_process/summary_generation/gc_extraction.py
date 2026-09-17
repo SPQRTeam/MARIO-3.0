@@ -12,7 +12,7 @@ def main(config):
 
         paths.gc_section_dir.mkdir(exist_ok=True)
         data[section_name].state_records.to_csv(paths.game_state_csv, index=False)
-        data[section_name].players_collective_records.to_csv(paths.gc_collective_csv, index=False)
+        data[section_name].players_collective_records.to_csv(paths.gc_raw_csv, index=False)
 
         paths.gc_individual_dir.mkdir(exist_ok=True)
         for key in data[section_name].players_individual_records.keys():
