@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import re
 
 from src.post_process.game_controller.loading import iterate_yaml_list_items
+from src.post_process.game_controller.old_log_format.oldloading import iterate_old_gc_and_tcm_logs
 import src.post_process.game_controller.gc_utils as gc_utils
 
 INACTIVE_STATES = {"initial", "finished"}
@@ -149,7 +150,11 @@ class DataTransmuter:
     def on_status_message(self, item):
         # get the game state as the latest one encountered in this section (the log is sequential)
         game_state = self.current_section.state_records[-1]
-        my_homeness = self.homeness[item.entry.team_num]
+        try:
+            my_homeness = self.homeness[item.entry.team_num]
+        except KeyError:
+            print(f"Warning: found unexpected team number in GC log. Playing teams should be {self.gameinfo.teams.home.number} vs {self.gameinfo.teams.away.number}, got {item.entry.team_num}. Skipping.")
+            return
         # can't automatize so much because of legacy column names, luckily these rows are not as big as the game state's
         individual_csvable = munch.Munch(
             gctime=gc_utils.timestamp_to_float(gc_utils.timestamp_diff(item.timestamp, self.current_section.start_timestamp)),
@@ -218,7 +223,15 @@ class DataTransmuter:
     def stir(self):
         if self.results:
             raise ValueError("Can only be used once.")
-        for item in iterate_yaml_list_items(self.config.get_paths().gc_log):
+
+        paths = self.config.get_paths()
+        if paths.gc_log.exists():
+            iterator = iterate_yaml_list_items(paths.gc_log)
+        else:
+            tcm_logs = sorted(paths.tcm_log_old_glob.parent.glob(paths.tcm_log_old_glob.name))
+            iterator = iterate_old_gc_and_tcm_logs(paths.gc_log_old, tcm_logs)
+
+        for item in iterator:
             itemtype =  item["entry"]["__type__"]
 
             if itemtype == "metadata":

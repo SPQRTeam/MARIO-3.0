@@ -8,6 +8,9 @@ default_gameinfo: "$data_dir/default_gameinfo.yaml"
 gc_log: "$game_dir/gc.yaml"
 gameinfo: "$game_dir/gameinfo.yaml"
 
+gc_log_old: "$game_dir/oldgc/gc.txt"
+tcm_log_old_glob: "$game_dir/oldgc/tcm_*.log"  # will be ordered lexicographically. Zero-based number indices are advised.
+
 field_type_txt: "$game_dir/field_type.txt"
 vision_type_txt: "$game_dir/vision_type.txt"
 

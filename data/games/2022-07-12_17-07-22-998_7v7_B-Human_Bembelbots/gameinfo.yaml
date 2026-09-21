@@ -1,0 +1,9 @@
+teams:
+  away:
+    fieldPlayerColor: Gray
+    goalkeeperColor: Gray
+    number: 3
+  home:
+    fieldPlayerColor: Black
+    goalkeeperColor: Black
+    number: 5

@@ -10,6 +10,10 @@ class GCReturnMessage_v4:
     @classmethod
     def from_base64(cls, b64_string):
         msg_bytes = base64.b64decode(b64_string)
+        return cls.from_bytes(msg_bytes)
+
+    @classmethod
+    def from_bytes(cls, msg_bytes):
         msg_data = struct.unpack(cls.STRUCT_FORMAT, msg_bytes)
         if msg_data[0] != cls.THE_HEADER:
             raise ValueError("GC return message header doesn't match")

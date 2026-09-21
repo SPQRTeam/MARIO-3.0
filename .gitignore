@@ -3,6 +3,8 @@ __pycache__/
 *.mp4
 *.mkv
 gc.yaml
+gc.txt
+tcm_*.log
 data/**/*.csv
 orientazioniReduxOutput*
 data/robot_pics/*

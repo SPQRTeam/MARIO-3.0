@@ -1,5 +1,15 @@
 import munch
 
+def timestamp_add(a, b):
+    tot = munch.Munch(
+        secs=a.secs+b.secs,
+        nanos=a.nanos+b.nanos,
+    )
+    while tot.nanos >= 1_000_000_000:
+        tot.secs += 1
+        tot.nanos -= 1_000_000_000
+    return tot
+
 def timestamp_diff(a, b):
     diff = munch.Munch(
         secs=a.secs-b.secs,
@@ -7,7 +17,7 @@ def timestamp_diff(a, b):
     )
     while diff.nanos < 0:
         diff.secs -= 1
-        diff.nanos += 1000000000
+        diff.nanos += 1_000_000_000
     return diff
 
 # milliseconds
