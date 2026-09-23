@@ -1,6 +1,9 @@
 import base64
 import struct
 
+class SkippableGCMessage(Exception):
+    pass
+
 class GCReturnMessage_v4:
     THE_HEADER = b"RGrt"
     THE_VERSION = 4
@@ -13,8 +16,13 @@ class GCReturnMessage_v4:
         msg_data = struct.unpack(cls.STRUCT_FORMAT, msg_bytes)
         if msg_data[0] != cls.THE_HEADER:
             raise ValueError("GC return message header doesn't match")
-        if msg_data[1] != cls.THE_VERSION and msg_data[1] != -1:  # at least one occasion happened where a team set version -1. For now whatever, the version has been 4 ever since the new GC was made in 2023, so we can't have anything else at the moment.
-            raise ValueError(f"GC return message version doesn't match: expected {cls.THE_VERSION}, got {msg_data[1]}")
+        if msg_data[1] != cls.THE_VERSION:
+            # if received value looks like a legitimate version that should be implemented, use an exception that is not caught for a loud report
+            if 1 <= msg_data[1] and msg_data[1] <= 10:
+                raise ValueError(f"GC return message version doesn't match: expected {cls.THE_VERSION}, got {msg_data[1]}")
+            # otherwise, it's probably garbage by some random misconfigured robot: use a special exception that will be caught and silently ignored
+            else:
+                raise SkippableGCMessage()
         return {
             "player_num": msg_data[2],
             "team_num": msg_data[3],

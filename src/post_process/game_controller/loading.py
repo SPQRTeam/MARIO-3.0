@@ -35,14 +35,17 @@ GCLoader.add_constructor("!monitorRequest", basic_dict_constructor_factory("moni
 
 # this is important
 def gc_return_constructor(loader, node):
-    yaml_stuff = loader.construct_mapping(node, deep=True)
-    decoded_data = gc_messages.GCReturnMessage_v4.from_base64(yaml_stuff["data"])
-    yaml_stuff_without_data = {k:d for k,d in yaml_stuff.items() if k!="data"}
-    return dict(
-        __type__="status_message",
-        **yaml_stuff_without_data,
-        **decoded_data,
-    )
+    try:
+        yaml_stuff = loader.construct_mapping(node, deep=True)
+        decoded_data = gc_messages.GCReturnMessage_v4.from_base64(yaml_stuff["data"])
+        yaml_stuff_without_data = {k:d for k,d in yaml_stuff.items() if k!="data"}
+        return dict(
+            __type__="status_message",
+            **yaml_stuff_without_data,
+            **decoded_data,
+        )
+    except gc_messages.SkippableGCMessage:
+        return "__invalid__"
 GCLoader.add_constructor("!statusMessage", gc_return_constructor)
 
 # actions don't have binary data, and a check in the following code confirms that we don't really care about them either
@@ -81,11 +84,12 @@ def iterate_yaml_list_items(yaml_path):
                         item = munch.munchify(yaml.load("".join(lines_of_current_item), GCLoader)[0])
                         if item["entry"] == "end":
                             break
-                        # check that every action record is followed by a game_state record.
-                        # if so, we can safely avoid paying attention to actions to update the game state since it's always given in full.
-                        assert (not last_record_was_action) or item["entry"]["__type__"] == "game_state"
-                        last_record_was_action = item["entry"]["__type__"] == "action"
-                        yield item
+                        elif item["entry"] != "__invalid__":
+                            # check that every action record is followed by a game_state record.
+                            # if so, we can safely avoid paying attention to actions to update the game state since it's always given in full.
+                            assert (not last_record_was_action) or item["entry"]["__type__"] == "game_state"
+                            last_record_was_action = item["entry"]["__type__"] == "action"
+                            yield item
                     # ...start fresh if there is still data
                     if raw_line:
                         lines_of_current_item.clear()
