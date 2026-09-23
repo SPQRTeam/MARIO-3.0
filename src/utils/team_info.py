@@ -74,6 +74,13 @@ class TeamMappingLR:
         with open(path, "w") as f:
             json.dump(asdict(self), f, **kwargs)
 
+    @classmethod
+    def load(cls, path, **kwargs):
+        with open(path, "r") as f:
+            data = json.load(f, **kwargs)
+        # Unpack the dictionary directly into the dataclass constructor
+        return cls(**data)
+
 def make_team_mapping_lr(gameinfo, side_hint, section_name, team_names):
     if side_hint:
         key_to_read = side_hint.hint_type
