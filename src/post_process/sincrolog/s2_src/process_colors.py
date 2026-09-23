@@ -69,7 +69,7 @@ class _ColorProcessor:
                 i += 1
 
     def _writeout(self, indices, color):
-        self.output_df.loc[indices, ("id", "color")] = (self.next_id, color)
+        self.output_df.loc[indices, ("id", "color")] = (self.next_id, str(color))
         self.next_id += 1
 
     def go(self, use_progressbar=True):
