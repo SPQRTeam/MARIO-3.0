@@ -15,6 +15,7 @@ parser.add_argument("--time-limit", "-l", type=int, default=-1, help="Seconds of
 parser.add_argument("--halp", action="store_true", help='''Display a "panic help" message useful if you've been away for too long, then exit.''')
 args = parser.parse_args()
 args.streaming = False  # for MarioConfig compatibility
+args.vision_type = None  # for MarioConfig compatibility
 
 if args.halp:
     print("So, this is what you really gotta do:")
