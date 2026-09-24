@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 import src.utils as utils
 
-all_steps = [1,2,3,4,9]
+all_steps = [1,2,3,4,5,9]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", "-c", type=Path, default=None, help="Path to config.yaml (default: ./config.yaml)")
@@ -25,7 +25,7 @@ if args.halp:
     print("Extra stuff:")
     print("- Omit -g to use the last game used in this project (including MARIO!)")
     print("- Use -t to only do specific steps")
-    print("- Use -s to only do specific sections (numbers for steps 1,3,4; letters for step 2)")
+    print("- Use -s to only do specific sections (numbers for steps 1,3,4; letters for step 2,5)")
     exit(0)
 
 config = utils.MarioConfig.from_yaml(args)
@@ -66,6 +66,12 @@ if 4 in args.steps:
         for sn in section_names:
             print(sn)
             step4.main(sn, args.time_limit, config)
+
+if 5 in args.steps:
+    # there's more initialization involved here, so iteration over sections will be handled in the step5 file
+    import src.post_process.sincrolog.step5_events as step5
+    section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
+    step5.main(section_names, config)
 
 if 9 in args.steps:
     import src.post_process.sincrolog.stepx_error as stepx
