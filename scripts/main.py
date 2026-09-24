@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import src.utils as utils
 from src.core.tracker import Tracking
 from src.ml.models.ollama_wrapper import OllamaWrapper
-from src.ml.models.openai_chat_wrapper import commentary_llm_from_config
+from src.ml import load_llm, load_tts_maybe
 
 from src.utils.coherence import check_coherence_with_saved_or_update
 from src.utils.side_hint import SideHint
@@ -235,36 +235,11 @@ def main():
         raise ValueError("Only specify --side-hint with 1 section. The hint will then be saved for future runs (even multi-section ones)")
 
     # load models — commentary text LLM: OpenAI API or local Ollama (see models.commentary_llm_backend)
-    _llm_backend = config.models.commentary_llm_backend.lower().strip()
-    if _llm_backend == "openai":
-        llm = commentary_llm_from_config(config.models)
-        logger.info(
-            "Commentary LLM: OpenAI (model=%s)",
-            config.models.openai_model,
-        )
-    else:
-        llm = OllamaWrapper(config.models.llm_model)
-        logger.info("Commentary LLM: Ollama (model=%s)", config.models.llm_model)
+    llm = load_llm(config, logger)
 
-    match_tts = None
-    tts_on = config.tts.enabled
-    geom_llm = config.commentating.geometry_llm_commentary_enabled
-    periodic_llm = config.commentating.periodic_llm_commentary_enabled
-    commentate = config.features.commentate
     # Commentary LLM runs inside MatchCommentaryTTS.maybe_llm_commentary, which needs match_tts set.
     # Previously match_tts existed only with tts.enabled, so geometry LLM never ran with audio off.
-    if tts_on or (commentate and (geom_llm or periodic_llm)):
-        from src.ml.models.match_commentary_tts import MatchCommentaryTTS
-
-        match_tts = MatchCommentaryTTS(config)
-        if tts_on:
-            logger.info(
-                "TTS commentary queue enabled (install: pip install edge-tts emoji; ffplay for playback)."
-            )
-        else:
-            logger.info(
-                "MatchCommentaryTTS: text/LLM only (tts.enabled=false); no speech synthesis."
-            )
+    match_tts = load_tts_maybe(config, logger)
 
     Models = namedtuple("Models", ["yolo_v8", "yolo_v12", "ocr_vlm", "llm", "match_tts"])
     models = Models(
