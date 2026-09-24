@@ -1,9 +1,9 @@
 {
   "manual": {
     "mario_half_name": "mario_B",
-    "gc_validity_start_time": 690235.0,
+    "gc_validity_start_time": 0,
     "mario_start_time": 0,
     "gc_flip_team": 5
   },
-  "calculated_gc_start_time": 690411.0
+  "calculated_gc_start_time": 44574.0
 }

@@ -114,4 +114,7 @@ class TempWorkingFilesManager:
     def finalize_and_cleanup(self):
         for record in self.registered_files:
             shutil.move(record.working, record.final)
-        self.holding_dir.rmdir()
+        try:
+            self.holding_dir.rmdir()
+        except OSError:  # directory not empty
+            pass
