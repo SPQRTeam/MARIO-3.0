@@ -67,16 +67,16 @@ def verify_mario_id_loss(mario_df, mario_id, current_time, future_window_ms=2000
     ]
     return mario_id not in future_frames['id'].unique()
 
-def calculate_assignment_cost(future_positions, gc_trajectory, current_time, current_distance, config):
+def calculate_assignment_cost(future_positions, gc_trajectory, current_time, current_distance, s_config):
     
-    total_cost = current_distance * config.sincrolog.current_distance_weight
+    total_cost = current_distance * s_config.current_distance_weight
 
     future_cost_sum = 0
     distances = []
     distances.append(current_distance)
     if not future_positions.empty:
 
-        for i in range(0, len(future_positions), config.sincrolog.future_sample_rate):
+        for i in range(0, len(future_positions), s_config.future_sample_rate):
             future_pos = future_positions.iloc[i]
             gc_at_time = gc_trajectory[gc_trajectory.gametime <= future_pos.gametime]
             if gc_at_time.empty:
@@ -88,7 +88,7 @@ def calculate_assignment_cost(future_positions, gc_trajectory, current_time, cur
             distances.append(future_distance)
             
             time_offset = future_pos.gametime - current_time
-            weight = max(0.1, 1.0 - (time_offset / config.sincrolog.future_analysis_window_ms))
+            weight = max(0.1, 1.0 - (time_offset / s_config.future_analysis_window_ms))
             weighted_cost = future_distance * weight
             future_cost_sum += weighted_cost
             
@@ -101,7 +101,7 @@ def calculate_assignment_cost(future_positions, gc_trajectory, current_time, cur
     return total_cost
 
 
-def update_gc_flipped_state(current_assignments, gc_state_all, mario_robots, last_associated_mario_pos, gc_flipped_state, current_time, config):
+def update_gc_flipped_state(current_assignments, gc_state_all, mario_robots, last_associated_mario_pos, gc_flipped_state, current_time, s_config):
     # debug
     debug_robot = (3, 5)  
     debug_interval = (540000, 542000) 
@@ -160,15 +160,15 @@ def update_gc_flipped_state(current_assignments, gc_state_all, mario_robots, las
                     print(f"  Mario pos: ({mario_pos[0]:.1f}, {mario_pos[1]:.1f})")
                     print(f"  Dist normal: {dist:.1f}")
                     print(f"  Dist flipped: {dist_flipped:.1f}")
-                    print(f"  Flip threshold: {config.sincrolog.flip_dist_threshold}")
-                    print(f"  Condition dist > threshold: {dist} > {config.sincrolog.flip_dist_threshold} = {dist > config.sincrolog.flip_dist_threshold}")
-                    print(f"  Condition flipped < threshold: {dist_flipped} < {config.sincrolog.flip_dist_threshold} = {dist_flipped < config.sincrolog.flip_dist_threshold}")
+                    print(f"  Flip threshold: {s_config.flip_dist_threshold}")
+                    print(f"  Condition dist > threshold: {dist} > {s_config.flip_dist_threshold} = {dist > s_config.flip_dist_threshold}")
+                    print(f"  Condition flipped < threshold: {dist_flipped} < {s_config.flip_dist_threshold} = {dist_flipped < s_config.flip_dist_threshold}")
 
-                if dist > config.sincrolog.flip_dist_threshold and dist_flipped < config.sincrolog.flip_dist_threshold:
+                if dist > s_config.flip_dist_threshold and dist_flipped < s_config.flip_dist_threshold:
                     is_flipped = True
                     if robot_key == debug_robot and debug_interval[0] <= current_time <= debug_interval[1]:
                         print(f"  SETTING FLIPPED (dist too high, flipped close)")
-                elif dist < config.sincrolog.flip_dist_threshold:
+                elif dist < s_config.flip_dist_threshold:
                     is_flipped = False
                     if robot_key == debug_robot and debug_interval[0] <= current_time <= debug_interval[1]:
                         print(f"  UNSETTING FLIPPED (normal dist OK)")
@@ -189,7 +189,7 @@ def update_gc_flipped_state(current_assignments, gc_state_all, mario_robots, las
                     continue
                 
                 last_mario_pos = np.array(last_mario_pos, dtype=np.float64)
-                search_radius = config.sincrolog.max_search_radius
+                search_radius = s_config.max_search_radius
                 mario_positions_array = mario_robots_no_asg[['field_x', 'field_y']].values.astype(np.float64)
                 
                 if len(mario_positions_array) > 0:
@@ -218,14 +218,14 @@ def update_gc_flipped_state(current_assignments, gc_state_all, mario_robots, las
                             print(f"  All dists flipped: {dists_flipped}")
                             print(f"  Min dist normal: {min_dist_normal:.1f}")
                             print(f"  Min dist flipped: {min_dist_flipped:.1f}")
-                            print(f"  Condition normal > threshold: {min_dist_normal} > {config.sincrolog.flip_dist_threshold} = {min_dist_normal > config.sincrolog.flip_dist_threshold}")
-                            print(f"  Condition flipped < threshold*1.5: {min_dist_flipped} < {config.sincrolog.flip_dist_threshold * 1.5} = {min_dist_flipped < config.sincrolog.flip_dist_threshold * 1.5}")
+                            print(f"  Condition normal > threshold: {min_dist_normal} > {s_config.flip_dist_threshold} = {min_dist_normal > s_config.flip_dist_threshold}")
+                            print(f"  Condition flipped < threshold*1.5: {min_dist_flipped} < {s_config.flip_dist_threshold * 1.5} = {min_dist_flipped < s_config.flip_dist_threshold * 1.5}")
                         
-                        if min_dist_normal > config.sincrolog.flip_dist_threshold and min_dist_flipped < config.sincrolog.flip_dist_threshold * 1.5:
+                        if min_dist_normal > s_config.flip_dist_threshold and min_dist_flipped < s_config.flip_dist_threshold * 1.5:
                             is_flipped = True
                             if robot_key == debug_robot and debug_interval[0] <= current_time <= debug_interval[1]:
                                 print(f" SETTING FLIPPED (unassigned, normal too far)")
-                        elif min_dist_normal < config.sincrolog.flip_dist_threshold:
+                        elif min_dist_normal < s_config.flip_dist_threshold:
                             is_flipped = False
                             if robot_key == debug_robot and debug_interval[0] <= current_time <= debug_interval[1]:
                                 print(f" UNSETTING FLIPPED (unassigned, normal close)")
@@ -262,7 +262,7 @@ def mindist(mario_robots, gc_pos, distance):
     candidates_min = np.linalg.norm(mario_robots[['field_x', 'field_y']].values.astype(np.float32) - gc_pos.astype(np.float32), axis=1).min()
     return min(distance, candidates_min)
   
-def remove_lost_assignments(updated_assignments, gc_state_all, mario_robots, mario_ids_visible, mario_df, current_time, updated_gc_only, updated_loss_times, association_frame_count, gc_flipped_state, current_frame, break_events, config):
+def remove_lost_assignments(updated_assignments, gc_state_all, mario_robots, mario_ids_visible, mario_df, current_time, updated_gc_only, updated_loss_times, association_frame_count, gc_flipped_state, current_frame, break_events, s_config):
     if break_events is None:
         break_events = []
 
@@ -281,11 +281,11 @@ def remove_lost_assignments(updated_assignments, gc_state_all, mario_robots, mar
         distance = calc_dist(mario_robot, gc_pos, robot_key, gc_flipped_state, current_time)
 
 
-        dynamic_threshold = config.sincrolog.distance_break_threshold_max 
+        dynamic_threshold = s_config.distance_break_threshold_max 
 
         break_due_to_distance = (
             distance > dynamic_threshold and
-            mindist(mario_robots, gc_pos, distance) < distance * config.sincrolog.distance_better_factor
+            mindist(mario_robots, gc_pos, distance) < distance * s_config.distance_better_factor
         )
         if break_due_to_distance:
             break_events.append({
@@ -325,7 +325,7 @@ def get_robots_to_assign(gc_state_active, updated_gc_only, current_time):
 
     return robots_to_assign
 
-def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, current_time, available_mario_robots, mario_df, gc_df, last_associated_mario_pos, gc_flipped_state, team_map, config):
+def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, current_time, available_mario_robots, mario_df, gc_df, last_associated_mario_pos, gc_flipped_state, team_map, s_config):
     all_candidates = []
     
     # Debug 
@@ -348,15 +348,15 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
         
         time_since_loss = current_time - updated_loss_times.get(robot_key, current_time)
         search_radius = max(
-            config.sincrolog.max_nao_speed, 
-            min(config.sincrolog.max_nao_speed + (config.sincrolog.max_nao_speed) * time_since_loss, 
-                config.sincrolog.max_search_radius)
+            s_config.max_robot_speed, 
+            min(s_config.max_robot_speed + (s_config.max_robot_speed) * time_since_loss, 
+                s_config.max_search_radius)
         )
         
         gc_trajectory = gc_df[
             (gc_df.team == robot_key[0]) & (gc_df.player == robot_key[1]) &
             (gc_df.gametime >= current_time) & 
-            (gc_df.gametime <= current_time + config.sincrolog.future_analysis_window_ms)
+            (gc_df.gametime <= current_time + s_config.future_analysis_window_ms)
         ].sort_values('gametime')
         
         gc_robot_color = get_gc_robot_color(robot_key[0], robot_key[1], team_map)
@@ -419,10 +419,10 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
                 future_positions = mario_df[
                     (mario_df.id == mario_id) &
                     (mario_df.gametime > current_time) &
-                    (mario_df.gametime <= current_time + config.sincrolog.future_analysis_window_ms)
+                    (mario_df.gametime <= current_time + s_config.future_analysis_window_ms)
                 ].sort_values('gametime')
                 cost = calculate_assignment_cost(
-                    future_positions, gc_trajectory, current_time, distance, config
+                    future_positions, gc_trajectory, current_time, distance, s_config
                 )
                 
                 if (robot_key in debug_robots and 
@@ -433,7 +433,7 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
                 
     return all_candidates
 
-def assign_with_hungarian(all_candidates, updated_assignments, updated_gc_only, updated_loss_times, mario_df, current_time, last_associated_mario_pos, association_frame_count, config):
+def assign_with_hungarian(all_candidates, updated_assignments, updated_gc_only, updated_loss_times, mario_df, current_time, last_associated_mario_pos, association_frame_count, s_config):
     if not all_candidates:
         return
     unassigned_gc_keys = sorted(list(set(candidate.robot_key for candidate in all_candidates)))
@@ -446,7 +446,7 @@ def assign_with_hungarian(all_candidates, updated_assignments, updated_gc_only, 
 
     for candidate in all_candidates:
       
-        if candidate.cost <= config.sincrolog.max_assignment_cost:
+        if candidate.cost <= s_config.max_assignment_cost:
             gc_idx = gc_map[candidate.robot_key]
             mario_idx = mario_map[candidate.mario_id]
             cost_matrix[gc_idx, mario_idx] = candidate.cost
@@ -459,7 +459,7 @@ def assign_with_hungarian(all_candidates, updated_assignments, updated_gc_only, 
 
     for r, c in zip(row_ind, col_ind):
         cost = cost_matrix[r, c]
-        if cost <= config.sincrolog.max_assignment_cost:
+        if cost <= s_config.max_assignment_cost:
             robot_key = unassigned_gc_keys[r]
             mario_id = available_mario_ids_list[c]
             if mario_id not in updated_assignments.values():
@@ -479,7 +479,7 @@ def update_assignments_manually(
         gc_df, mario_df, current_assignments, gc_only, loss_times, current_time,
         last_associated_mario_pos, gc_state_raw, mario_state,
         association_frame_count, gc_flipped_state, current_frame, break_events,
-        team_map, config):
+        team_map, s_config):
     """
     Manual reassignment algorithm with dynamic search radius.
     """
@@ -490,11 +490,11 @@ def update_assignments_manually(
     mario_robots = mario_state[mario_state.type == 'robot'].copy()
     mario_ids_visible = set(mario_robots.id.unique())
     
-    update_gc_flipped_state(current_assignments, gc_state_all, mario_robots, last_associated_mario_pos, gc_flipped_state, current_time, config)
+    update_gc_flipped_state(current_assignments, gc_state_all, mario_robots, last_associated_mario_pos, gc_flipped_state, current_time, s_config)
     # 1. Remove lost assignments
     break_events = remove_lost_assignments(
         current_assignments, gc_state_all, mario_robots, mario_ids_visible, mario_df, current_time,
-        gc_only, loss_times, association_frame_count, gc_flipped_state, current_frame, break_events, config
+        gc_only, loss_times, association_frame_count, gc_flipped_state, current_frame, break_events, s_config
     )
     # 2. Handle re-entered robots
     update_reentered_robots(gc_state_active, current_assignments, gc_only, loss_times, current_time)
@@ -508,10 +508,10 @@ def update_assignments_manually(
         available_mario_robots = mario_robots[mario_robots.id.isin(available_mario_ids)]
 
         all_candidates = compute_candidates(
-            robots_to_assign, gc_state_active, loss_times, current_time, available_mario_robots, mario_df, gc_df, last_associated_mario_pos, gc_flipped_state, team_map, config
+            robots_to_assign, gc_state_active, loss_times, current_time, available_mario_robots, mario_df, gc_df, last_associated_mario_pos, gc_flipped_state, team_map, s_config
         )
         assign_with_hungarian(
-            all_candidates, current_assignments, gc_only, loss_times, mario_df, current_time, last_associated_mario_pos, association_frame_count, config
+            all_candidates, current_assignments, gc_only, loss_times, mario_df, current_time, last_associated_mario_pos, association_frame_count, s_config
         )
 
     # 5. Update last_associated_mario_pos for each gc robot, if it has not received an assignment, keep the last detected mario position    

@@ -10,6 +10,7 @@ gameinfo: "$game_dir/gameinfo.yaml"
 
 field_type_txt: "$game_dir/field_type.txt"
 vision_type_txt: "$game_dir/vision_type.txt"
+robot_type_txt: "$game_dir/robot_type.txt"
 
 source_video: "$mario_section_dir/video.mp4"
 annotated_video: "$mario_section_dir/output.mp4"

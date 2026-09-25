@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any, Dict, Optional
 import yaml
-from munch import Munch
+from munch import Munch, RecursiveMunch
 from src.utils.transforms import TransformsCalculator
 import numpy as np
 from datetime import datetime
@@ -33,6 +33,10 @@ VISION_TYPE_TO_CNN = {
     "k1": ColorCNNBooster,
     "t1": ColorCNNBooster,
 }
+
+# for now these use the same names, so let's just do this.
+# anyone is free to change in their version if need be.
+ROBOT_TYPE_TO_FILE = VISION_TYPE_TO_FILE
 
 def _deep_merge(base: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str, Any]:
     """Recursively merge ``overlay`` into ``base`` (mutates ``base``)."""
@@ -112,12 +116,25 @@ class MarioConfig(Munch):
         self.field_config.goalpost_y = self.field_config.goal_width / 2
 
         # set up lazy robot vision config (it only matters for the tracker, so i don't want stuff like GC extraction to care)
-        self.vision_type_from_cli = args.vision_type
+        try:
+            self.vision_type_from_cli = args.vision_type
+        except AttributeError:  # not in namespace, i.e. config created from a script that doesn't have this arg
+            self.vision_type_from_cli = None
         self._vision_type = None
         self._vision_config = None
         # be eager if the vision type was given explicitly in the CLI so any script can update the saved one
         if self.vision_type_from_cli is not None:
             self._load_vision_config()
+
+        # set up lazy robot type config for the same reasons (it only matters for sincrolog)
+        try:
+            self.robot_type_from_cli = args.robot_type
+        except AttributeError:  # not in namespace, i.e. config created from a script that doesn't have this arg
+            self.robot_type_from_cli = None
+        self._robot_type = None
+        self._robot_config = None
+        if self.robot_type_from_cli is not None:
+            self._load_robot_config()
 
         if update_game_history:
             with open(game_history_path, 'w') as f:
@@ -143,6 +160,25 @@ class MarioConfig(Munch):
         if self._vision_config is None:
             self._load_vision_config()
         return self._vision_config
+
+    # lazy robot config
+    def _load_robot_config(self):
+        self._robot_type = check_coherence_with_saved_or_update(self.get_paths().robot_type_txt, self.robot_type_from_cli, "robot_type", "-r", required=True)
+        robot_path = ROOT_DIR / "config" / "robots" / ROBOT_TYPE_TO_FILE[self._robot_type]
+        with open(robot_path, 'r') as f:
+            data = yaml.safe_load(f)
+        self._robot_config = Munch.fromDict(data)
+        print(self._robot_config)
+    @property
+    def robot_type(self):
+        if self._robot_type is None:
+            self._load_robot_config()
+        return self._robot_type
+    @property
+    def robot_config(self):
+        if self._robot_config is None:
+            self._load_robot_config()
+        return self._robot_config
 
 
     @property

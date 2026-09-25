@@ -9,7 +9,7 @@ import src.post_process.sincrolog.s4_src.match_robot as match_robot
 import json
 import src.utils as utils
 
-def calculate_assignments_at_start_of_play(gc_fixed_penalties, mario_df, time, config):
+def calculate_assignments_at_start_of_play(gc_fixed_penalties, mario_df, time, s_config):
 
     # Usa il dataset corretto per le assegnazioni
     final_gc_state = utils.get_gc_state_at_time(gc_fixed_penalties, time)
@@ -32,7 +32,7 @@ def calculate_assignments_at_start_of_play(gc_fixed_penalties, mario_df, time, c
         assigned_gc_indices = set()
 
         for r, c in zip(row_ind, col_ind):
-            if distance_matrix[r, c] < config.sincrolog.distance_threshold_initial:
+            if distance_matrix[r, c] < s_config.distance_threshold_initial:
                 gc_robot = gc_on_field.iloc[r]
                 mario_robot = mario_robots.iloc[c]
                 assignments[(int(gc_robot.team), int(gc_robot.player))] = int(mario_robot.id)
@@ -56,7 +56,7 @@ def calculate_assignments_at_start_of_play(gc_fixed_penalties, mario_df, time, c
     else:
         # Se non c'è palla MARIO, usa la logica GC (
         gc_state = utils.get_gc_state_at_time(gc_fixed_penalties, time)
-        ball_x, ball_y, ball_source = match_ball.choose_ball_position(mario_frame, gc_state, None, None, time, config.sincrolog.max_ball_age, config.sincrolog.max_ball_jump)
+        ball_x, ball_y, ball_source = match_ball.choose_ball_position(mario_frame, gc_state, None, None, time, s_config.max_ball_age, s_config.max_ball_jump)
         initial_ball = (ball_x, ball_y, time)
 
     return {
@@ -74,7 +74,7 @@ def local_to_global(robot_x, robot_y, robot_theta, local_x, local_y):
     global_y = robot_y + local_x * np.sin(robot_theta) + local_y * np.cos(robot_theta)
     return global_x, global_y
 
-def merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assignment_data, time_limit, team_map, config):
+def merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assignment_data, time_limit, team_map, s_config):
     """
     Merge GC and MARIO datasets using manual reassignment data.
     """
@@ -123,7 +123,7 @@ def merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assign
         current_assignments, current_gc_only, robot_loss_times, last_associated_mario_pos, gc_flipped_state, break_events = match_robot.update_assignments_manually(
             gc_fixed_penalties, mario_df, current_assignments, current_gc_only,
             robot_loss_times, timestamp, last_associated_mario_pos, gc_state, mario_state,
-            association_frame_count, gc_flipped_state, frame, break_events, team_map, config,
+            association_frame_count, gc_flipped_state, frame, break_events, team_map, s_config,
             ##### passo come argomento gc_state e mario_state per evitare di ricalcolarlo
             ##### idem per team_map
         )
@@ -229,7 +229,7 @@ def main(section_name, time_limit, config):
         pd.DataFrame().to_csv(paths.merged_csv, index=False)
         return
 
-    assignment_data = calculate_assignments_at_start_of_play(gc_fixed_penalties, mario_df, 0, config)
+    assignment_data = calculate_assignments_at_start_of_play(gc_fixed_penalties, mario_df, 0, config.robot_config.sincrolog)
     print("\n[DEBUG] ASSEGNAZIONI INIZIALI:")
     for robot_key, mario_id in assignment_data['assignments'].items():
         print(f"  Robot {robot_key} → MARIO ID {mario_id}")
@@ -238,8 +238,8 @@ def main(section_name, time_limit, config):
     initial_ball = assignment_data['initial_ball']
     ball_source = assignment_data['ball_source']
 
-    merged_df, break_df = merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assignment_data, time_limit, team_map, config)
-    # ball_df = match_ball.build_ball_dataset(mario_df, gc_fixed_penalties, initial_ball, ball_source, config)
+    merged_df, break_df = merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assignment_data, time_limit, team_map, config.robot_config.sincrolog)
+    # ball_df = match_ball.build_ball_dataset(mario_df, gc_fixed_penalties, initial_ball, ball_source, config.robot_config.sincrolog)
     # ball_df.to_csv(paths.sincrolog_output_dir / "ball_dataset.csv", index=False)
 
     print(f"[CONFIG] Salvando output in: {paths.merged_csv}")
