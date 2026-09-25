@@ -20,14 +20,17 @@ import tqdm
 from pathlib import Path
 from src.utils.drawing import Drawer, TEAM_COLORS
 from src.vision.calibration import Calibration
+import src.core.files_handling as files_module
 
 
 # sorry but multiprocessing w/o globals is a major pain
 def init(section_name):
     global MARIO_START_TIME, FLIP_TEAM, team_map, cap, width, height, \
-        frame_count, fps, out, gc_df, mario_df, sincrolog_df, draw
+        frame_count, fps, out, gc_df, mario_df, sincrolog_df, draw, \
+        working_files_tracker
 
     paths = config.get_paths(gc_section_name=section_name)
+    working_files_tracker = files_module.TempWorkingFilesManager(paths.gc_section_dir)
 
     team_map = utils.extract_team_mapping_from_yaml(paths.gameinfo)
 
@@ -54,7 +57,7 @@ def init(section_name):
     else:
         output_filename = "MARIOVIZ.mp4"
     out = cv.VideoWriter(
-        str(paths.sincrolog_output_dir / output_filename),
+        str(working_files_tracker.register_and_get_twf(paths.sincrolog_output_dir / output_filename)),
         cv.VideoWriter_fourcc(*"mp4v"),
         fps,
         (width, height)
@@ -79,6 +82,11 @@ def init(section_name):
 
     calibration = Calibration.load(paths.camera_calibration_npz)
     draw = Drawer(config, calibration)
+
+def end():
+    working_files_tracker.finalize_and_cleanup()
+
+
 
 # SIDE-EFFECT
 def process_frame_fused(frame, frame_idx):
@@ -313,4 +321,6 @@ for sn in section_names:
         main_parallel()
     else:
         main_legacy()
+
+    end()
     

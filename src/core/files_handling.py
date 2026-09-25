@@ -93,8 +93,18 @@ class TWFMRecord:
     final: Path
     working: Path
 
+def _rmempty(p):
+    for child in p.iterdir():
+        if child.is_dir():
+            _rmempty(child)
+    try:
+        p.rmdir()
+    except OSError:  # directory not empty
+        pass
+
 class TempWorkingFilesManager:
     def __init__(self, final_dir):
+        self.final_dir = final_dir
         self.registered_files = []
         self.holding_dir = final_dir.with_name(f"WIP{final_dir.name[1:]}")
         self.holding_dir.mkdir(exist_ok=True)
@@ -106,15 +116,13 @@ class TempWorkingFilesManager:
         return False
 
     def register_and_get_twf(self, final_path):
-        working_path = self.holding_dir / final_path.name
+        working_path = self.holding_dir / final_path.relative_to(self.final_dir)
         assert not self._taken(working_path)
+        working_path.parent.mkdir(parents=True, exist_ok=True)
         self.registered_files.append(TWFMRecord(final=final_path, working=working_path))
         return working_path
 
     def finalize_and_cleanup(self):
         for record in self.registered_files:
             shutil.move(record.working, record.final)
-        try:
-            self.holding_dir.rmdir()
-        except OSError:  # directory not empty
-            pass
+        _rmempty(self.holding_dir)

@@ -251,7 +251,7 @@ def main(section_name, config):
         
         params['calculated_gc_start_time'] = float(gc_start_time)
         with open(paths.section_params, 'w', encoding='utf-8') as f:
-            json.dump(params, f, indent=2, ensure_ascii=False)
+            json.dump(params, f, indent=4, ensure_ascii=False)
 
         # APPLY ROBOT EXCLUSIONS (BEFORE crash detection)
         robot_exclusions = params["manual"].get("robot_exclusions", [])
