@@ -200,6 +200,7 @@ def process_frame_parallel(frame_idx):
 # not guaranteed to have the latest features though.
 def main_legacy():
     frame_idx = math.ceil(MARIO_START_TIME / 1000 * fps)
+    initial_frame_idx = frame_idx
     cap.set(cv.CAP_PROP_POS_FRAMES, frame_idx)
     progressbar = tqdm.tqdm(total=frame_count - frame_idx)
 
@@ -225,7 +226,7 @@ def main_legacy():
         if cv.waitKey(1) == ord('q'):
             break
 
-        if args.time_limit >= 0 and frame_idx >= args.time_limit * fps:
+        if args.time_limit >= 0 and frame_idx - initial_frame_idx >= args.time_limit * fps:
             print("Time limit reached")
             break
 
@@ -240,6 +241,7 @@ def main_parallel():
     batch = np.ndarray((args.batch_size, height, width, 3), dtype=np.uint8, buffer=shm.buf)
 
     frame_idx = math.ceil(MARIO_START_TIME / 1000 * fps)
+    initial_frame_idx = frame_idx
     cap.set(cv.CAP_PROP_POS_FRAMES, frame_idx)
 
     progressbar = tqdm.tqdm(total=frame_count - frame_idx)
@@ -275,7 +277,7 @@ def main_parallel():
             print("Could not read (stream finished?)")
             break
 
-        if args.time_limit >= 0 and frame_idx >= args.time_limit * fps:
+        if args.time_limit >= 0 and frame_idx - initial_frame_idx >= args.time_limit * fps:
             print("Time limit reached")
             break
 
