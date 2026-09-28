@@ -24,12 +24,14 @@ import src.core.files_handling as files_module
 
 
 # sorry but multiprocessing w/o globals is a major pain
-def init(section_name):
+def init(_gc_section_name):
     global MARIO_START_TIME, FLIP_TEAM, team_map, cap, width, height, \
         frame_count, fps, out, gc_df, mario_df, sincrolog_df, draw, \
-        working_files_tracker
+        working_files_tracker, gc_section_name
 
-    paths = config.get_paths(gc_section_name=section_name)
+    gc_section_name = _gc_section_name
+
+    paths = config.get_paths(gc_section_name=_gc_section_name)
     working_files_tracker = files_module.TempWorkingFilesManager(paths.gc_section_dir)
 
     team_map = utils.extract_team_mapping_from_yaml(paths.gameinfo)
@@ -42,7 +44,7 @@ def init(section_name):
     FLIP_TEAM = params["manual"]["gc_flip_team"]
     mario_half_name = params["manual"]["mario_half_name"]
 
-    paths = config.get_paths(gc_section_name=section_name, mario_section_name=mario_half_name)
+    paths = config.get_paths(gc_section_name=_gc_section_name, mario_section_name=mario_half_name)
 
     cap = cv.VideoCapture(str(paths.source_video))
     width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
@@ -202,7 +204,7 @@ def main_legacy():
     frame_idx = math.ceil(MARIO_START_TIME / 1000 * fps)
     initial_frame_idx = frame_idx
     cap.set(cv.CAP_PROP_POS_FRAMES, frame_idx)
-    progressbar = tqdm.tqdm(total=frame_count - frame_idx)
+    progressbar = tqdm.tqdm(total=frame_count - frame_idx, desc=f"{'Fused' if args.fused else 'Mario'} visualization for {gc_section_name}")
 
     while cap.isOpened():
 
@@ -244,7 +246,7 @@ def main_parallel():
     initial_frame_idx = frame_idx
     cap.set(cv.CAP_PROP_POS_FRAMES, frame_idx)
 
-    progressbar = tqdm.tqdm(total=frame_count - frame_idx)
+    progressbar = tqdm.tqdm(total=frame_count - frame_idx, desc=f"{'Fused' if args.fused else 'Mario'} visualization for {gc_section_name}")
 
     while cap.isOpened():
 
