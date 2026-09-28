@@ -1,6 +1,7 @@
 from scipy.optimize import linear_sum_assignment 
 import numpy as np
 from collections import namedtuple
+import logging
 
 Candidate = namedtuple('Candidate', ['cost', 'robot_key', 'mario_id', 'distance'])
 
@@ -32,22 +33,6 @@ def get_gc_robot_color(team, player, team_map):
         print(f"[COLOR] Unknown team {team}")
         return 'unknown'
 
-# TEMP pending new vision model
-def normalize_color_for_matching(color):
-    """
-    Normalize colors to handle common detection model errors.
-    """
-    color_same = {
-        'red': {'red'},
-        'blue': {'blue', 'green'},
-        'black': {'black', 'green'},
-        'white': {'white'},
-        'yellow': {'yellow', 'red', 'green'},
-        'gray': {'gray', 'grey', 'green'},
-        'grey': {'gray', 'grey', 'green'},
-    }
-    
-    return color_same.get(color.lower(), {color.lower()})    
 def is_robot_flipped_origin(gc_x, gc_y, mario_x, mario_y, flip_threshold):
     """
     Returns True if the flipped position of the GC is significantly closer to MARIO than the normal one.
@@ -257,10 +242,12 @@ def calc_dist(mario_robot, gc_pos, robot_key, gc_flipped_state, current_time):
     else:
         return float('inf')
     
-def mindist(mario_robots, gc_pos, distance):
+def mindist(mario_robots, gc_pos, max_distance):
     # Find the closest mario robot among all visible ones
+    if len(mario_robots) == 0:
+        return max_distance
     candidates_min = np.linalg.norm(mario_robots[['field_x', 'field_y']].values.astype(np.float32) - gc_pos.astype(np.float32), axis=1).min()
-    return min(distance, candidates_min)
+    return min(max_distance, candidates_min)
   
 def remove_lost_assignments(updated_assignments, gc_state_all, mario_robots, mario_ids_visible, mario_df, current_time, updated_gc_only, updated_loss_times, association_frame_count, gc_flipped_state, current_frame, break_events, s_config):
     if break_events is None:
@@ -325,7 +312,8 @@ def get_robots_to_assign(gc_state_active, updated_gc_only, current_time):
 
     return robots_to_assign
 
-def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, current_time, available_mario_robots, mario_df, gc_df, last_associated_mario_pos, gc_flipped_state, team_map, s_config):
+def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, current_time, available_mario_robots, mario_df, gc_df, last_associated_mario_pos, gc_flipped_state, team_map, config):
+    s_config = config.robot_config.sincrolog
     all_candidates = []
     
     # Debug 
@@ -338,6 +326,7 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
         if gc_robot_data.empty: 
             continue
         gc_pos = gc_robot_data.iloc[0][['x', 'y']].values
+        for_the_logger = f"\n    Computing candidates for {robot_key}\n"
 
         # Use the flipped position if the robot is flipped
         is_flipped = gc_flipped_state.get(robot_key, False)
@@ -360,14 +349,19 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
         ].sort_values('gametime')
         
         gc_robot_color = get_gc_robot_color(robot_key[0], robot_key[1], team_map)
-        gc_color_same = normalize_color_for_matching(gc_robot_color)
+        gc_color_same = config.vision_config.equivalent_colors(gc_robot_color)
 
+        # TODO marked for deletion (it's getting annoying anyway)
         if (robot_key in debug_robots and 
             debug_time_start <= current_time <= debug_time_end):
             print(f"\n[COLOR DEBUG] t={current_time/1000:.2f}s Robot {robot_key}:")
             print(f"  GC robot color: {gc_robot_color}")
             print(f"  GC color equivalents: {gc_color_same}")
             print(f"  Available MARIO robots: {len(available_mario_robots)}")
+
+        for_the_logger += f"    GC robot color: {gc_robot_color}\n"
+        for_the_logger += f"    GC color equivalents: {gc_color_same}\n"
+        for_the_logger += f"    Available MARIO robots: {len(available_mario_robots)}\n"
 
         for _, mario_robot in available_mario_robots.iterrows():
             mario_pos = mario_robot[['field_x', 'field_y']].values
@@ -382,35 +376,52 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
                     assert isinstance(mario_colors, (set, list, tuple))  # i.e. not a string or some other scalar
                     
                     # Debug per robot specifici
+                    # TODO marked for deletion
                     if (robot_key in debug_robots and 
                         debug_time_start <= current_time <= debug_time_end):
                         print(f"    Checking MARIO ID {mario_id}:")
                         print(f"      MARIO colors: {mario_colors}")
+
+                    for_the_logger += f"    Checking MARIO ID {mario_id}:\n"
+                    for_the_logger += f"        MARIO colors: {mario_colors}\n"
                     
                     # check if at least one of the MARIO colors matches the GC robot color
                     color_match = False
                     for mario_color in mario_colors:
-                        mario_color_same = normalize_color_for_matching(mario_color)
+                        mario_color_same = config.vision_config.equivalent_colors(mario_color)
                         if gc_color_same & mario_color_same:  
                             color_match = True
+                            # TODO marked for deletion
                             if (robot_key in debug_robots and 
                                 debug_time_start <= current_time <= debug_time_end):
                                 print(f"        COLOR MATCH: {mario_color} -> {mario_color_same}")
+                            # end mark
+                            for_the_logger += f"        COLOR MATCH: {mario_color} -> {mario_color_same}\n"
                             break
+                        # TODO marked for deletion
                         elif (robot_key in debug_robots and 
                                 debug_time_start <= current_time <= debug_time_end):
                             print(f"        No match: {mario_color} -> {mario_color_same}")
-                    
+                        #end mark
+                        else:
+                            for_the_logger += f"        No match: {mario_color} -> {mario_color_same}\n"
+
                     if not color_match:
                         # Debug esteso
+                        # TODO marked for deletion
                         if (robot_key in debug_robots and 
                             debug_time_start <= current_time <= debug_time_end):
                             print(f"      REJECTED for color mismatch")
+                        # end mark
+                        for_the_logger += f"        REJECTED for color mismatch\n"
                         continue  # Skip this candidate
                     else:
+                        # TODO marked for deletion
                         if (robot_key in debug_robots and 
                             debug_time_start <= current_time <= debug_time_end):
                             print(f"      ACCEPTED for color match")
+                        # end mark
+                        for_the_logger += f"        ACCEPTED for color match\n"
 
             # Use the flipped position if the robot is flipped
             distance = np.linalg.norm(gc_pos_for_search - mario_pos)
@@ -430,6 +441,8 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
                     print(f"      CANDIDATE: distance={distance:.1f}, cost={cost:.1f}")
                 
                 all_candidates.append(Candidate(cost, robot_key, mario_robot.id, distance))
+
+        logging.getLogger(__name__).debug(for_the_logger)
                 
     return all_candidates
 
@@ -473,16 +486,33 @@ def assign_with_hungarian(all_candidates, updated_assignments, updated_gc_only, 
                 last_associated_mario_pos[robot_key] = mario_row.iloc[-1][['field_x', 'field_y']].values
 
 
+def setup_logger(paths):
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
+    if not logger.handlers:  # for itempotency
+        file_handler = logging.FileHandler(paths.sincrolog_output_dir / 'match_robot_log.txt', mode='w')
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    print(logger.handlers)
+
+def _frame_to_mmss(frame):
+    secs = frame//30
+    return f"{secs//60}:{secs%60}"
+
 
 # TODO this could be turned into an object i think
 def update_assignments_manually(
         gc_df, mario_df, current_assignments, gc_only, loss_times, current_time,
         last_associated_mario_pos, gc_state_raw, mario_state,
         association_frame_count, gc_flipped_state, current_frame, break_events,
-        team_map, s_config):
+        team_map, config):
     """
     Manual reassignment algorithm with dynamic search radius.
     """
+    s_config = config.robot_config.sincrolog
     if break_events is None:
         break_events = []
     gc_state_all = gc_state_raw[gc_state_raw.x.notna()].copy()
@@ -503,12 +533,13 @@ def update_assignments_manually(
     robots_to_assign = get_robots_to_assign(gc_state_active, gc_only, current_time)
 
     # 4. Compute candidates and assign
+    all_candidates = None
     if robots_to_assign and not mario_robots.empty:
         available_mario_ids = set(mario_robots.id.unique()) - set(current_assignments.values())
         available_mario_robots = mario_robots[mario_robots.id.isin(available_mario_ids)]
 
         all_candidates = compute_candidates(
-            robots_to_assign, gc_state_active, loss_times, current_time, available_mario_robots, mario_df, gc_df, last_associated_mario_pos, gc_flipped_state, team_map, s_config
+            robots_to_assign, gc_state_active, loss_times, current_time, available_mario_robots, mario_df, gc_df, last_associated_mario_pos, gc_flipped_state, team_map, config
         )
         assign_with_hungarian(
             all_candidates, current_assignments, gc_only, loss_times, mario_df, current_time, last_associated_mario_pos, association_frame_count, s_config
@@ -521,10 +552,25 @@ def update_assignments_manually(
         if mario_id is not None:
             association_frame_count[robot_key] = association_frame_count.get(robot_key, 0) + 1
             mario_row = mario_df[(mario_df.id == mario_id) & (mario_df.gametime == current_time)]
-            last_associated_mario_pos[robot_key] = mario_row.iloc[-1][['field_x', 'field_y']].values
+            if len(mario_row) > 0:  # it's possible for a track to disappear and reappear after a short while without breaking assignment
+                last_associated_mario_pos[robot_key] = mario_row.iloc[-1][['field_x', 'field_y']].values
         else:
             association_frame_count[robot_key] = 0
             last_associated_mario_pos[robot_key] = last_associated_mario_pos.get(robot_key)
+
+    logger = logging.getLogger(__name__)
+    # print(logger.handlers)
+    logger.info(f"""
+        FRAME {current_frame}\t(time {_frame_to_mmss(current_frame)})
+        robots_to_assign {robots_to_assign}
+        mario_robots\n{mario_robots}
+        gc_state_active\n{gc_state_active}
+        gc_only {gc_only}
+        candidates {all_candidates}
+        current_assignments {current_assignments}
+        break_events {break_events}
+        
+    """)
     
 
     return current_assignments, gc_only, loss_times, last_associated_mario_pos, gc_flipped_state, break_events

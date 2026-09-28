@@ -7,7 +7,7 @@ sincrolog:
   future_sample_rate: 30
 
   current_distance_weight: 1.0
-  max_assignment_cost: 700
+  max_assignment_cost: 1400
 
   max_search_radius: 2000
   max_robot_speed: 1000
@@ -18,4 +18,4 @@ sincrolog:
   distance_break_threshold_max: 1000
   distance_better_factor: 0.65
 
-  flip_dist_threshold: 550
+  flip_dist_threshold: 1200

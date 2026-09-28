@@ -74,7 +74,7 @@ def local_to_global(robot_x, robot_y, robot_theta, local_x, local_y):
     global_y = robot_y + local_x * np.sin(robot_theta) + local_y * np.cos(robot_theta)
     return global_x, global_y
 
-def merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assignment_data, time_limit, team_map, s_config):
+def merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assignment_data, time_limit, team_map, config, section_name):
     """
     Merge GC and MARIO datasets using manual reassignment data.
     """
@@ -106,7 +106,7 @@ def merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assign
     print(f"--- Inizio Merge Manuale ({len(timestamps)} frames) ---")
     association_frame_count = {}
     break_events = []
-    frame_indices_tqdm = tqdm.tqdm(enumerate(frame_indices), total=len(frame_indices))
+    frame_indices_tqdm = tqdm.tqdm(enumerate(frame_indices), total=len(frame_indices), desc=f"step4 for {section_name}")
     for i, frame in frame_indices_tqdm:
         mario_row = mario_df[mario_df['frame'] == frame].iloc[0]
         timestamp = mario_row['gametime']
@@ -123,7 +123,7 @@ def merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assign
         current_assignments, current_gc_only, robot_loss_times, last_associated_mario_pos, gc_flipped_state, break_events = match_robot.update_assignments_manually(
             gc_fixed_penalties, mario_df, current_assignments, current_gc_only,
             robot_loss_times, timestamp, last_associated_mario_pos, gc_state, mario_state,
-            association_frame_count, gc_flipped_state, frame, break_events, team_map, s_config,
+            association_frame_count, gc_flipped_state, frame, break_events, team_map, config,
             ##### passo come argomento gc_state e mario_state per evitare di ricalcolarlo
             ##### idem per team_map
         )
@@ -212,6 +212,8 @@ def main(section_name, time_limit, config):
 
     team_map = utils.extract_team_mapping_from_yaml(paths.gameinfo)
 
+    match_robot.setup_logger(paths)
+
     mario_df = pd.read_csv(
         paths.mario_post_step2_csv,
         converters={'color': ast.literal_eval},
@@ -238,7 +240,7 @@ def main(section_name, time_limit, config):
     initial_ball = assignment_data['initial_ball']
     ball_source = assignment_data['ball_source']
 
-    merged_df, break_df = merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assignment_data, time_limit, team_map, config.robot_config.sincrolog)
+    merged_df, break_df = merge_datasets_with_manual_reassignment(gc_fixed_penalties, mario_df, assignment_data, time_limit, team_map, config, section_name)
     # ball_df = match_ball.build_ball_dataset(mario_df, gc_fixed_penalties, initial_ball, ball_source, config.robot_config.sincrolog)
     # ball_df.to_csv(paths.sincrolog_output_dir / "ball_dataset.csv", index=False)
 

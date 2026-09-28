@@ -10,13 +10,13 @@ parser.add_argument('--game-name', '--game', '-g', type=str, default=None, help=
 parser.add_argument('--steps', '-t', type=int, nargs="+", choices=all_steps, default=all_steps, help="Steps to perform. Defaults to all.")
 parser.add_argument('--sections', '-s', nargs='+', help="Sections to work with. ONLY THE NUMBERS OR LETTERS. Defaults to all.")
 parser.add_argument("--field-type", "--field", "-f", type=str, default=None, choices=utils.FIELD_TYPE_TO_FILE.keys(), help="The field this game was played on. Only specify the first time you work with this game.")
+parser.add_argument("--vision-type", "--vision", "-v", type=str, default=None, choices=utils.VISION_TYPE_TO_FILE.keys(), help="The set of vision models for this game. This stage doesn't care, so specify only if you want to update the saved one.")
 parser.add_argument("--robot-type", "--robot", "-r", type=str, default=None, choices=utils.ROBOT_TYPE_TO_FILE.keys(), help="The robots in this game. If different, pick the most powerful. Only specify the first time you work with this game.")
 parser.add_argument("--profile", action="store_true", help="Enable profiling")
 parser.add_argument("--time-limit", "-l", type=int, default=-1, help="Seconds of video to process. Default is all video.")
 parser.add_argument("--halp", action="store_true", help='''Display a "panic help" message useful if you've been away for too long, then exit.''')
 args = parser.parse_args()
 args.streaming = False  # for MarioConfig compatibility
-args.vision_type = None  # for MarioConfig compatibility
 
 if args.halp:
     print("So, this is what you really gotta do:")
