@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any, Dict, Optional
 import yaml
-from munch import Munch, RecursiveMunch
+from munch import Munch
 from src.utils.transforms import TransformsCalculator
 import numpy as np
 from datetime import datetime
@@ -12,6 +12,7 @@ from ..coherence import check_coherence_with_saved_or_update
 from src.vision.color_cnn import ColorCNNBooster, ColorCNNNao
 
 from .paths import PathsConfig, ROOT_DIR
+from .vision import VisionConfig
 
 FIELD_TYPE_TO_FILE = {
     "SPL": "fieldSPL.yaml",
@@ -149,7 +150,7 @@ class MarioConfig(Munch):
         vision_path = ROOT_DIR / "config" / "vision_types" / VISION_TYPE_TO_FILE[self._vision_type]
         with open(vision_path, 'r') as f:
             data = yaml.safe_load(f)
-        self._vision_config = Munch(data)
+        self._vision_config = VisionConfig(data)
     @property
     def vision_type(self):
         if self._vision_type is None:

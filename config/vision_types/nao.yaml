@@ -5,3 +5,26 @@ use_v12_only: false
 
 color_classifier_weights: "data/models/cnn_colori_NAO_best.pth"
 color_classifier_config: "data/models/cnn_colori_NAO_config.yaml"
+
+
+
+# for sincrolog matching: make up for imperfections in the color classifier (and spelling differences)
+# by specifying, for each color, which colors are also accepted s that color.
+
+# This is not necessarily symmetric: e.g. if blue: [blue, green] and green: [green]
+# then green counts as blue but not vice versa.
+
+# In practice, the sets associated to the MARIO-robot and the GC-robot are compared
+# and the color matches if there is a non-empty intersection.
+
+# A set always includes the color itself, even if you don't specify it.
+
+# don't use this property directly in the code, rather call .equivalent_colors(color)
+_equivalent_colors:
+  red: ['red']
+  blue: ['blue', 'green']
+  black: ['black', 'green']
+  white: ['white']
+  yellow: ['yellow', 'red', 'green']
+  gray: ['gray', 'grey', 'green']
+  grey: ['gray', 'grey', 'green']
