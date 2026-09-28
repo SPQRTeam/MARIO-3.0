@@ -12,11 +12,12 @@ class Neotrack:
         self.indices.append(i)
 
 class _ColorProcessor:
-    def __init__(self, df, config):
+    def __init__(self, df, config, section_name):
         self.input_df = df.copy()
         self.output_df = df.copy()
         self.next_id = df["id"].max() + 1
         self.config = config
+        self.section_name = section_name
 
     def _handle_track(self, input_track_id):
         track_selector = self.input_df["id"]==input_track_id
@@ -75,10 +76,10 @@ class _ColorProcessor:
     def go(self, use_progressbar=True):
         iterids = self.input_df.id.unique()
         if use_progressbar:
-            iterids = tqdm.tqdm(iterids)
+            iterids = tqdm.tqdm(iterids, desc=f"step2-color for {self.section_name}")
         for track_id in iterids:
             self._handle_track(track_id)
         return self.output_df
 
-def go(df, config):
-    return _ColorProcessor(df, config).go()
+def go(df, config, section_name):
+    return _ColorProcessor(df, config, section_name).go()

@@ -28,7 +28,7 @@ def main(section_name, config):
         if partial_df.iloc[0].type == "robot" and len(partial_df) < config.min_robot_persistence_frames:
             df.drop(index=partial_df.index, inplace=True)
 
-    df = colors.go(df, config)
+    df = colors.go(df, config, section_name)
     df = interpolation.go(df, config)
 
     reordered_columns = list(df.columns)
