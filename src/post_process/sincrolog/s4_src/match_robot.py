@@ -315,12 +315,7 @@ def get_robots_to_assign(gc_state_active, updated_gc_only, current_time):
 def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, current_time, available_mario_robots, mario_df, gc_df, last_associated_mario_pos, gc_flipped_state, team_map, config):
     s_config = config.robot_config.sincrolog
     all_candidates = []
-    
-    # Debug 
-    debug_time_start = 0 
-    debug_time_end = 25 * 1000    
-    debug_robots = [(13, 2)]  
-    
+
     for robot_key in robots_to_assign:
         gc_robot_data = gc_state_active[(gc_state_active.team == robot_key[0]) & (gc_state_active.player == robot_key[1])]
         if gc_robot_data.empty: 
@@ -351,14 +346,6 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
         gc_robot_color = get_gc_robot_color(robot_key[0], robot_key[1], team_map)
         gc_color_same = config.vision_config.equivalent_colors(gc_robot_color)
 
-        # TODO marked for deletion (it's getting annoying anyway)
-        if (robot_key in debug_robots and 
-            debug_time_start <= current_time <= debug_time_end):
-            print(f"\n[COLOR DEBUG] t={current_time/1000:.2f}s Robot {robot_key}:")
-            print(f"  GC robot color: {gc_robot_color}")
-            print(f"  GC color equivalents: {gc_color_same}")
-            print(f"  Available MARIO robots: {len(available_mario_robots)}")
-
         for_the_logger += f"    GC robot color: {gc_robot_color}\n"
         for_the_logger += f"    GC color equivalents: {gc_color_same}\n"
         for_the_logger += f"    Available MARIO robots: {len(available_mario_robots)}\n"
@@ -374,13 +361,6 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
                 if not mario_color_data.empty:
                     mario_colors = mario_color_data.iloc[0]['color']  # color list 
                     assert isinstance(mario_colors, (set, list, tuple))  # i.e. not a string or some other scalar
-                    
-                    # Debug per robot specifici
-                    # TODO marked for deletion
-                    if (robot_key in debug_robots and 
-                        debug_time_start <= current_time <= debug_time_end):
-                        print(f"    Checking MARIO ID {mario_id}:")
-                        print(f"      MARIO colors: {mario_colors}")
 
                     for_the_logger += f"    Checking MARIO ID {mario_id}:\n"
                     for_the_logger += f"        MARIO colors: {mario_colors}\n"
@@ -391,36 +371,15 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
                         mario_color_same = config.vision_config.equivalent_colors(mario_color)
                         if gc_color_same & mario_color_same:  
                             color_match = True
-                            # TODO marked for deletion
-                            if (robot_key in debug_robots and 
-                                debug_time_start <= current_time <= debug_time_end):
-                                print(f"        COLOR MATCH: {mario_color} -> {mario_color_same}")
-                            # end mark
                             for_the_logger += f"        COLOR MATCH: {mario_color} -> {mario_color_same}\n"
                             break
-                        # TODO marked for deletion
-                        elif (robot_key in debug_robots and 
-                                debug_time_start <= current_time <= debug_time_end):
-                            print(f"        No match: {mario_color} -> {mario_color_same}")
-                        #end mark
                         else:
                             for_the_logger += f"        No match: {mario_color} -> {mario_color_same}\n"
 
                     if not color_match:
-                        # Debug esteso
-                        # TODO marked for deletion
-                        if (robot_key in debug_robots and 
-                            debug_time_start <= current_time <= debug_time_end):
-                            print(f"      REJECTED for color mismatch")
-                        # end mark
                         for_the_logger += f"        REJECTED for color mismatch\n"
                         continue  # Skip this candidate
                     else:
-                        # TODO marked for deletion
-                        if (robot_key in debug_robots and 
-                            debug_time_start <= current_time <= debug_time_end):
-                            print(f"      ACCEPTED for color match")
-                        # end mark
                         for_the_logger += f"        ACCEPTED for color match\n"
 
             # Use the flipped position if the robot is flipped
@@ -435,11 +394,7 @@ def compute_candidates(robots_to_assign, gc_state_active, updated_loss_times, cu
                 cost = calculate_assignment_cost(
                     future_positions, gc_trajectory, current_time, distance, s_config
                 )
-                
-                if (robot_key in debug_robots and 
-                    debug_time_start <= current_time <= debug_time_end):
-                    print(f"      CANDIDATE: distance={distance:.1f}, cost={cost:.1f}")
-                
+                for_the_logger += f"        CANDIDATE: distance={distance:.1f}, cost={cost:.1f}\n"
                 all_candidates.append(Candidate(cost, robot_key, mario_robot.id, distance))
 
         logging.getLogger(__name__).debug(for_the_logger)
