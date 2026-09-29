@@ -438,7 +438,6 @@ class MatchCommentaryTTS:
         self._fps = config.processing.fps
         self._export_joined = tts_cfg.export_clean_video_with_commentary
         self._keep_segments = tts_cfg.keep_commentary_audio_segments
-        self._section_name: Optional[str] = None
         self._clean_video_path: Optional[Path] = None
         self._audio_mix_path: Optional[Path] = None
         self._joined_video_path: Optional[Path] = None
@@ -463,7 +462,6 @@ class MatchCommentaryTTS:
         relative to the start of the exported clean video (not the whole recording).
         """
         paths = config.get_paths(mario_section_name=section_name)
-        self._section_name = section_name
         self._section_start_frame: int = int(start_frame)
         if not self._export_joined:
             return

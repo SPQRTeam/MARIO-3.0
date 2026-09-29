@@ -347,7 +347,7 @@ class Tracking:
         writing_context = contextlib.nullcontext() if async_out else multiwriter
         with writing_context:  # manages opening and closing the multiwriter, but only if not async out. Even if I don't refer to this variable.
             # Process frames
-            for frame, results, reading in tqdm.tqdm(self.video_iterator, total=len(self.video_iterator), desc=f"MARIO Tracking for {self.section_name.name}"):
+            for frame, results, reading in tqdm.tqdm(self.video_iterator, total=len(self.video_iterator), desc=f"MARIO Tracking for {self.section_name}"):
                 t_loop = time.perf_counter()
 
                 self.track_values[self.frame_id] = results

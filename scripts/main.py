@@ -250,7 +250,7 @@ def main():
         match_tts=match_tts,
     )
 
-    sections_to_do = utils.get_sections_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
+    sections_to_do = utils.get_section_names_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
 
     if config.is_streaming:
         for section_name in sections_to_do:
