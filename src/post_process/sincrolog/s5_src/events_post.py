@@ -14,17 +14,12 @@ import src.core.files_handling as files_module
 
 class SincrologPosthocEventer:
     """
-    Main tracking class for processing video frames with detection and tracking.
+    Class for standalone events processing using the merged robot data from sincrolog.
     """
 
     def __init__(self, config, mario_section_name, gc_section_names, models_for_commentary=None):
-        """
-        Initialize tracking with configuration.
-
-        Args:
-            config: MARIO configuration object.
-        """
         self.config = config
+        self.mario_section_name = mario_section_name
 
         _merged_dfs = []
         for gc_sec_name in gc_section_names:
@@ -77,17 +72,11 @@ class SincrologPosthocEventer:
         return df[["frame", "id", "type", "color", "bounding_box_in_image_space", "field_x", "field_y", "score_left", "score_right"]]
 
     def go(self):
-        """
-        Main tracking loop - process video and save results.
-
-        Args:
-            out_data: Output CSV file path (unused when ``write_csv`` is false).
-        """
         self.eventproc.begin_section()
 
         frame_ids = pd.unique(self.final_df.frame)
         print(frame_ids)
-        for frame in tqdm.tqdm(frame_ids):
+        for frame in tqdm.tqdm(frame_ids, desc=f"step5 for {self.mario_section_name}"):
             frame_df = self.final_df[self.final_df.frame == frame]
             events = self.eventproc.process_frame(frame_df)  # does all as internal side-effect, including writing the file
 
