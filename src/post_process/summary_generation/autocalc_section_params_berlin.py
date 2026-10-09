@@ -30,7 +30,7 @@ def process_section(mario_section_name, config, predetermined_gc_section_name=No
         "manual": {
             "mario_half_name": mario_section_name,
             "gc_validity_start_time": gc_start_time,
-            "mario_start_time": gc_start_time,  # the video is assumed to start at the beginning of ready, and the gctime does too, so they're aligned.
+            "mario_start_time": gc_start_time - 1_000,  # the video is assumed to start at the beginning of ready, and the gctime does too, so they're aligned.
             "gc_flip_team": team_mapping_lr["right_number"],  # the right team needs to have its poses flipped to go on the other side of the field
         },
         "calculated_gc_start_time": gc_start_time,

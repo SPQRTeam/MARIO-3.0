@@ -15,6 +15,8 @@ def timestamp_to_float(t):
     return (t.secs + (t.nanos / 1e9)) * 1000
 
 def filter_dict_recursive(d, keys_to_keep):
+    if not isinstance(d, dict):
+        return d
     result = {}
     for key, value in d.items():
         if key in keys_to_keep:

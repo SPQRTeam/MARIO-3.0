@@ -19,26 +19,34 @@ import src.utils as utils
 import tqdm
 from pathlib import Path
 from src.utils.drawing import Drawer, TEAM_COLORS
+from src.vision.calibration import Calibration
+import src.core.files_handling as files_module
 
 
 # sorry but multiprocessing w/o globals is a major pain
-def init(section_name):
+def init(_gc_section_name):
     global MARIO_START_TIME, FLIP_TEAM, team_map, cap, width, height, \
-        frame_count, fps, out, gc_df, mario_df, sincrolog_df, draw
+        frame_count, fps, out, gc_df, mario_df, sincrolog_df, draw, \
+        working_files_tracker, gc_section_name
 
-    raise NotImplementedError("With the PathsConfig refactor, all \"path\" configs need to be updated")
+    gc_section_name = _gc_section_name
 
-    team_map = utils.extract_team_mapping_from_yaml(config.gameinfo_path)
+    paths = config.get_paths(gc_section_name=_gc_section_name)
+    working_files_tracker = files_module.TempWorkingFilesManager(paths.gc_section_dir)
+
+    team_map = utils.extract_team_mapping_from_yaml(paths.gameinfo)
 
     # Carica i parametri dal file di configurazione JSON
-    with open(config.section_params_path(section_name), 'r', encoding='utf-8') as f:
+    with open(paths.section_params, 'r', encoding='utf-8') as f:
         params = json.load(f)
 
     MARIO_START_TIME = params["manual"]["mario_start_time"]
     FLIP_TEAM = params["manual"]["gc_flip_team"]
     mario_half_name = params["manual"]["mario_half_name"]
 
-    cap = cv.VideoCapture(str(config.video_path(mario_half_name)))
+    paths = config.get_paths(gc_section_name=_gc_section_name, mario_section_name=mario_half_name)
+
+    cap = cv.VideoCapture(str(paths.source_video))
     width = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
     # center loaded below
@@ -51,15 +59,15 @@ def init(section_name):
     else:
         output_filename = "MARIOVIZ.mp4"
     out = cv.VideoWriter(
-        str(config.section_dir(section_name) / config.sincrolog.output_dirname / output_filename),
+        str(working_files_tracker.register_and_get_twf(paths.sincrolog_output_dir / output_filename)),
         cv.VideoWriter_fourcc(*"mp4v"),
         fps,
         (width, height)
     )  
 
-    gc_df = pd.read_csv(config.gc_csv_post_step3_path(section_name))
+    gc_df = pd.read_csv(paths.gc_post_step3_csv)
     mario_df = pd.read_csv(
-        config.mario_post_step2_path(mario_half_name),
+        paths.mario_post_step2_csv,
         converters={
             'bounding_box_in_image_space': ast.literal_eval,
             'color': ast.literal_eval,
@@ -67,20 +75,20 @@ def init(section_name):
     )
     if args.fused:
         sincrolog_df = pd.read_csv(
-            config.merged_csv_path(section_name),
+            paths.merged_csv,
             converters={'bounding_box_in_image_space': ast.literal_eval},
         )
         #sincrolog_ball_df = pd.read_csv(output_dir / "ball_dataset.csv")
     else:
         sincrolog_df = None
 
-    raise NotImplementedError("The old radial + homography correction doesn't exist anymore, need to adapt this little part to the new camera calibration correction")
+    calibration = Calibration.load(paths.camera_calibration_npz)
+    draw = Drawer(config, calibration)
 
-    center, ks = R.load_radial_rectification(config.radial_rectification_path(mario_half_name), config.calibration.max_k_order)
-    homography_npz = np.load(config.homography_path(mario_half_name))
-    H_inv = np.linalg.inv(homography_npz["H"])
+def end():
+    working_files_tracker.finalize_and_cleanup()
 
-    draw = Drawer(config, center, ks, H_inv)
+
 
 # SIDE-EFFECT
 def process_frame_fused(frame, frame_idx):
@@ -194,8 +202,9 @@ def process_frame_parallel(frame_idx):
 # not guaranteed to have the latest features though.
 def main_legacy():
     frame_idx = math.ceil(MARIO_START_TIME / 1000 * fps)
+    initial_frame_idx = frame_idx
     cap.set(cv.CAP_PROP_POS_FRAMES, frame_idx)
-    progressbar = tqdm.tqdm(total=frame_count - frame_idx)
+    progressbar = tqdm.tqdm(total=frame_count - frame_idx, desc=f"{'Fused' if args.fused else 'Mario'} visualization for {gc_section_name}")
 
     while cap.isOpened():
 
@@ -219,7 +228,7 @@ def main_legacy():
         if cv.waitKey(1) == ord('q'):
             break
 
-        if args.time_limit >= 0 and frame_idx >= args.time_limit * fps:
+        if args.time_limit >= 0 and frame_idx - initial_frame_idx >= args.time_limit * fps:
             print("Time limit reached")
             break
 
@@ -234,9 +243,10 @@ def main_parallel():
     batch = np.ndarray((args.batch_size, height, width, 3), dtype=np.uint8, buffer=shm.buf)
 
     frame_idx = math.ceil(MARIO_START_TIME / 1000 * fps)
+    initial_frame_idx = frame_idx
     cap.set(cv.CAP_PROP_POS_FRAMES, frame_idx)
 
-    progressbar = tqdm.tqdm(total=frame_count - frame_idx)
+    progressbar = tqdm.tqdm(total=frame_count - frame_idx, desc=f"{'Fused' if args.fused else 'Mario'} visualization for {gc_section_name}")
 
     while cap.isOpened():
 
@@ -269,7 +279,7 @@ def main_parallel():
             print("Could not read (stream finished?)")
             break
 
-        if args.time_limit >= 0 and frame_idx >= args.time_limit * fps:
+        if args.time_limit >= 0 and frame_idx - initial_frame_idx >= args.time_limit * fps:
             print("Time limit reached")
             break
 
@@ -293,7 +303,8 @@ parser.add_argument("--no-parallel", action="store_false", dest="parallel")
 parser.add_argument("--show-gc-field", action="store_true")
 args = parser.parse_args()
 args.streaming = False  # for MarioConfig compatibility
-args.field_type = False  # for MarioConfig compatibility
+args.field_type = None  # for MarioConfig compatibility
+args.vision_type = None  # for MarioConfig compatibility
 
 if args.mario + args.fused != 1:
     parser.error("Please select exactly one visualization mode (mario or fused).")
@@ -314,4 +325,6 @@ for sn in section_names:
         main_parallel()
     else:
         main_legacy()
+
+    end()
     

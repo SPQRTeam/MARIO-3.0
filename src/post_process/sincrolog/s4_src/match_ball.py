@@ -279,7 +279,7 @@ def kalman_smooth_ball(ball_df, process_var=1.0, measure_var=50.0):
     ball_df['kalman_y'] = smooth_y
     return ball_df
 
-def build_ball_dataset(mario_df, gc_fixed_penalties, initial_ball, ball_source, config):
+def build_ball_dataset(mario_df, gc_fixed_penalties, initial_ball, ball_source, s_config):
     ball_rows = []
     timestamps = sorted(mario_df['gametime'].unique())
     last_mario_ball = None
@@ -311,8 +311,8 @@ def build_ball_dataset(mario_df, gc_fixed_penalties, initial_ball, ball_source, 
             last_gc_ball,
             last_mario_ball,
             timestamp,
-            config.sincrolog.max_ball_age,
-            config.sincrolog.max_ball_jump,
+            s_config.max_ball_age,
+            s_config.max_ball_jump,
         )
         
         # Aggiorna la memoria delle palle
@@ -325,7 +325,7 @@ def build_ball_dataset(mario_df, gc_fixed_penalties, initial_ball, ball_source, 
             last_gc_ball = (ball_x, ball_y, timestamp, source)
 
         # Calcola le palle "grezze" per il dataset
-        gc_balls = gc_state[(gc_state.ballage > 0) & (gc_state.ballage < config.sincrolog.max_ball_age)]
+        gc_balls = gc_state[(gc_state.ballage > 0) & (gc_state.ballage < s_config.max_ball_age)]
         is_playing = gc_state.playing.any() if not gc_state.empty else False
         
         # Inizializza le variabili

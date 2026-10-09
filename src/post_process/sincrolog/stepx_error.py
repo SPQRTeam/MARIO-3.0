@@ -26,7 +26,7 @@ MARGIN = 1000
 Questo si mette al posto di step4
 """
 
-def calculate_errors(gc_fixed_penalties, mario_df, time_limit, team_map, config):
+def calculate_errors(gc_fixed_penalties, mario_df, time_limit, team_map, config, section_name):
     robot_error_by_frame = []
 
     colors_with_localization = set()
@@ -36,7 +36,7 @@ def calculate_errors(gc_fixed_penalties, mario_df, time_limit, team_map, config)
         colors_with_localization.add(team_map.away_color)
 
     frame_indices = sorted(mario_df['frame'].unique())
-    frame_indices_tqdm = tqdm.tqdm(enumerate(frame_indices), total=len(frame_indices))
+    frame_indices_tqdm = tqdm.tqdm(enumerate(frame_indices), total=len(frame_indices), desc=f"mario-gc err calc for {section_name}")
     for i, frame in frame_indices_tqdm:
         mario_row = mario_df[mario_df['frame'] == frame].iloc[0]
         timestamp = mario_row['gametime']
@@ -130,7 +130,7 @@ def main(section_name, time_limit, config):
 
     gc_fixed_penalties = pd.read_csv(paths.gc_post_step3_csv)
 
-    errors = calculate_errors(gc_fixed_penalties, mario_df, time_limit, team_map, config)
+    errors = calculate_errors(gc_fixed_penalties, mario_df, time_limit, team_map, config, section_name)
 
     error_dir = paths.mario_section_dir / "error"
     error_dir.mkdir(exist_ok=True)

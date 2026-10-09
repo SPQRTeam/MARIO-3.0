@@ -74,6 +74,13 @@ class TeamMappingLR:
         with open(path, "w") as f:
             json.dump(asdict(self), f, **kwargs)
 
+    @classmethod
+    def load(cls, path, **kwargs):
+        with open(path, "r") as f:
+            data = json.load(f, **kwargs)
+        # Unpack the dictionary directly into the dataclass constructor
+        return cls(**data)
+
 def make_team_mapping_lr(gameinfo, side_hint, section_name, team_names):
     if side_hint:
         key_to_read = side_hint.hint_type
@@ -100,7 +107,7 @@ def make_team_mapping_lr(gameinfo, side_hint, section_name, team_names):
         # TODO with the commentator and sumgen, there's now an expectation that the gc extraction
         #      is performed before mario now, so maybe we could request that mario-gc section linking
         #      is also done beforehand and refer to the gc log of the section, which does say 1st-2nd half
-        is_second_half = "_A" not in section_name.name
+        is_second_half = "_A" not in section_name
         # This is another hack. Back in the day Charlotte and I noted the sidemapping field isn't always reliable.
         # It is for the more recent games we're using right now though.
         # Maybe more OCR for the future?

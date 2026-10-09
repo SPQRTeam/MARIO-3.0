@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 import src.utils as utils
 
-all_steps = [1,2,3,4,9]
+all_steps = [1,2,3,4,5,9]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", "-c", type=Path, default=None, help="Path to config.yaml (default: ./config.yaml)")
@@ -10,6 +10,8 @@ parser.add_argument('--game-name', '--game', '-g', type=str, default=None, help=
 parser.add_argument('--steps', '-t', type=int, nargs="+", choices=all_steps, default=all_steps, help="Steps to perform. Defaults to all.")
 parser.add_argument('--sections', '-s', nargs='+', help="Sections to work with. ONLY THE NUMBERS OR LETTERS. Defaults to all.")
 parser.add_argument("--field-type", "--field", "-f", type=str, default=None, choices=utils.FIELD_TYPE_TO_FILE.keys(), help="The field this game was played on. Only specify the first time you work with this game.")
+parser.add_argument("--vision-type", "--vision", "-v", type=str, default=None, choices=utils.VISION_TYPE_TO_FILE.keys(), help="The set of vision models for this game. This stage doesn't care, so specify only if you want to update the saved one.")
+parser.add_argument("--robot-type", "--robot", "-r", type=str, default=None, choices=utils.ROBOT_TYPE_TO_FILE.keys(), help="The robots in this game. If different, pick the most powerful. Only specify the first time you work with this game.")
 parser.add_argument("--profile", action="store_true", help="Enable profiling")
 parser.add_argument("--time-limit", "-l", type=int, default=-1, help="Seconds of video to process. Default is all video.")
 parser.add_argument("--halp", action="store_true", help='''Display a "panic help" message useful if you've been away for too long, then exit.''')
@@ -24,7 +26,7 @@ if args.halp:
     print("Extra stuff:")
     print("- Omit -g to use the last game used in this project (including MARIO!)")
     print("- Use -t to only do specific steps")
-    print("- Use -s to only do specific sections (numbers for steps 1,3,4; letters for step 2)")
+    print("- Use -s to only do specific sections (numbers for steps 1,3,4; letters for step 2,5)")
     exit(0)
 
 config = utils.MarioConfig.from_yaml(args)
@@ -65,6 +67,12 @@ if 4 in args.steps:
         for sn in section_names:
             print(sn)
             step4.main(sn, args.time_limit, config)
+
+if 5 in args.steps:
+    # there's more initialization involved here, so iteration over sections will be handled in the step5 file
+    import src.post_process.sincrolog.step5_events as step5
+    section_names = utils.get_section_names_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
+    step5.main(section_names, config)
 
 if 9 in args.steps:
     import src.post_process.sincrolog.stepx_error as stepx

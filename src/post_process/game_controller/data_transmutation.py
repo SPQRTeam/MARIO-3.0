@@ -7,7 +7,7 @@ import re
 from src.post_process.game_controller.loading import iterate_yaml_list_items
 import src.post_process.game_controller.gc_utils as gc_utils
 
-INACTIVE_STATES = {"initial", "finished"}
+INACTIVE_STATES = {"initial", "finished", "timeout"}
 TEAM_KEYS = {
     "score": None,
     "players": {
@@ -25,6 +25,9 @@ KEYS_TO_KEEP = {
         "home": TEAM_KEYS,
         "away": TEAM_KEYS,
     },
+    "primaryTimer": {
+        "remaining": None,
+    }
 }
 
 @dataclass
@@ -162,6 +165,8 @@ class DataTransmuter:
             ballage=item.entry.ball_age,
             fallen=item.entry.fallen,
             penalized=game_state[f"teams_{my_homeness}_players_{item.entry.player_num}_penalty"] != "noPenalty",
+            gamestate=game_state.state,
+            secsremaining=game_state.primaryTimer_remaining_0,
         )
         self.current_section.players_individual_records[(item.entry.player_num, item.entry.team_num)].append(individual_csvable)
         full_csvable = munch.Munch(
