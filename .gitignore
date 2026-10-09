@@ -39,3 +39,6 @@ data/games/*/gc_section_*/metadata.yaml
 
 **/sumgen_output/stats.json
 **/sumgen_global/*.txt
+
+ZZZYXAS_*
+zzzyxas_*
