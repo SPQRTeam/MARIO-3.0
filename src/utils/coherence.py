@@ -47,3 +47,20 @@ def check_coherence_with_saved_or_update(file_path, user_value, property_name, c
         stored_value = user_value
 
     return stored_value
+
+
+
+"""
+Checks if a value is given by command line, if not looks for a saved value in the specified file,
+if neither asks the user directly.
+
+Basically a simpler, more streamlined version of the above that also has user interaction but doesn't check coherence.
+Which one to use depends on the circumstances.
+"""
+def arg_saved_or_ask(cli_arg, saved_path, input_question):
+    if cli_arg is not None:
+        return cli_arg
+    elif saved_path.exists():
+        return saved_path.read_text()
+    else:
+        return input(input_question)

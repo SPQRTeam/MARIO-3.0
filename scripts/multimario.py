@@ -11,6 +11,7 @@ if __name__ == "__main__":
 
 import src.utils as utils
 from src.utils.config.paths import ROOT_DIR
+from src.utils.coherence import arg_saved_or_ask
 
 
 def add_multimario_arguments(parser):
@@ -55,15 +56,15 @@ def add_multimario_arguments(parser):
         choices=utils.VISION_TYPE_TO_FILE.keys(),
         help="Specify the vision type for ALL games. Will try to override any saved ones. If blank, follow saved, or be asked separately for each unavailable one."
     )
-
-
-def _arg_saved_or_ask(cli_arg, saved_path, input_question):
-    if cli_arg is not None:
-        return cli_arg
-    elif saved_path.exists():
-        return saved_path.read_text()
-    else:
-        return input(input_question)
+    parser.add_argument(  # this is only for sincrolog ATM, but still, if we're doing multiple games, why not say it early
+        "--robot-type",
+        "--robot",
+        "-r",
+        type=str,
+        default=None,
+        choices=utils.ROBOT_TYPE_TO_FILE.keys(),
+        help="The robots in this game. If different, pick the most powerful. Only specify the first time you work with this game."
+    )
 
 
 def go(args):
@@ -72,8 +73,8 @@ def go(args):
 
     for game_name in args.game_names:
         game_dir = ROOT_DIR / "data" / "games" / game_name
-        field_type = _arg_saved_or_ask(args.field_type, game_dir / "field_type.txt", f"{game_name} field type? ")
-        vision_type = _arg_saved_or_ask(args.vision_type, game_dir / "vision_type.txt", f"{game_name} vision type? ")  # it's way too early to care about vision, but it's the cleanest way to write this
+        field_type = arg_saved_or_ask(args.field_type, game_dir / "field_type.txt", f"{game_name} field type? ")
+        vision_type = arg_saved_or_ask(args.vision_type, game_dir / "vision_type.txt", f"{game_name} vision type? ")  # it's way too early to care about vision, but it's the cleanest way to write this
         if not (game_dir / "gameinfo.yaml").exists() or args.reparse_gc:
             subprocess.run([
                 "python3", "sumgen_main.py",
