@@ -11,7 +11,8 @@ if __name__ == "__main__":
 
 import src.utils as utils
 from src.utils.config.paths import ROOT_DIR
-from src.utils.coherence import arg_saved_or_ask
+from src.utils.coherence import arg_saved_or_ask, check_coherence_with_saved_or_update
+from src.utils.side_hint import SideHint
 
 
 def add_multimario_arguments(parser):
@@ -138,7 +139,11 @@ def go(args):
                 print("Side hint help: [left-or-right] [color-or-number]. Example: left red. Leave empty to ignore.")
                 _sh = input(f"{game_name}/{section_name} side hint? ")
                 if _sh:
-                    side_hints[(game_name, section_name)] = _sh.split(" ")
+                    _sh_split = _sh.split(" ")
+                    assert len(_sh_split) == 2
+                    _sh_serialized = SideHint.get_serialization(*_sh_split)
+                    _sh_serialized = check_coherence_with_saved_or_update(section_dir / "side_hint.txt", _sh_serialized, "side hint", "-sh", required=False)  # this also saves the provided side hint.
+                    side_hints[(game_name, section_name)] = _sh.split(",")
 
     # mario everything later
 
