@@ -121,6 +121,11 @@ def main():
         nargs="+",
         help="URL to a YAML file, path to a local YAML file, OR path to a ZIP file followed by the internal file path"
     )
+    parser.add_argument(
+        "-y", "--yes",
+        action="store_true",
+        help="Skip checks (i.e. delete all existing games)"
+    )
 
     args = parser.parse_args()
 
@@ -133,7 +138,7 @@ def main():
 
     game_dir = BASE_DIR / args.game_name
     if game_dir.exists():
-        resp = input(f"Game {game_dir} already exists. DELETE IT ENTIRELY? Type yes to confirm / no to abort > ")
+        resp = "y" if args.yes else input(f"Game {game_dir} already exists. DELETE IT ENTIRELY? Type yes to confirm / no to abort > ")
         if resp.lower() == "y" or resp.lower() == "yes":
             shutil.rmtree(game_dir)
         else:
