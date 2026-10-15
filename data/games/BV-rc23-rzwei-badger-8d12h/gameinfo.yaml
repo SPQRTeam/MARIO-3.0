@@ -1,0 +1,12 @@
+kickOffSide: away
+long: false
+sideMapping: homeDefendsLeftGoal
+teams:
+  away:
+    fieldPlayerColor: white
+    goalkeeperColor: red
+    number: 52
+  home:
+    fieldPlayerColor: blue
+    goalkeeperColor: black
+    number: 50
