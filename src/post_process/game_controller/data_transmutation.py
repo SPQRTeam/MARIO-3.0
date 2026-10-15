@@ -111,7 +111,8 @@ class DataTransmuter:
         # delete from collective players
         to_drop = [(b.player_num, b.team_num) for b in benchwarmers]
         df = self.current_section.players_collective_records  # only to shorten the name in the upcoming op
-        self.current_section.players_collective_records = df[~df.set_index(['player', 'team']).index.isin(to_drop)]
+        if not df.empty:
+            self.current_section.players_collective_records = df[~df.set_index(['player', 'team']).index.isin(to_drop)]
 
         # delete from individual players
         to_drop = {(b.player_num, b.team_num) for b in benchwarmers}
@@ -150,6 +151,10 @@ class DataTransmuter:
         self.current_section.phase.add(item.entry.phase)
 
     def on_status_message(self, item):
+        assert self.metadata, "Status messages need homeness"
+        # it's possible that robots of other teams randomly connected to the GC and sent irrelevant stuff, ignore them
+        if item.entry.team_num not in self.homeness.keys():
+            return
         # get the game state as the latest one encountered in this section (the log is sequential)
         game_state = self.current_section.state_records[-1]
         my_homeness = self.homeness[item.entry.team_num]
