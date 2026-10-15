@@ -122,7 +122,7 @@ def main():
         help="URL to a YAML file, path to a local YAML file, OR path to a ZIP file followed by the internal file path"
     )
     parser.add_argument(
-        "-y", "--yes",
+        "--yes",
         action="store_true",
         help="Skip checks (i.e. delete all existing games)"
     )
