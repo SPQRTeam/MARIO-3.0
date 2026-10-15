@@ -158,8 +158,6 @@ class Tracking:
     def _cleanup_runtime_outputs(self) -> None:
         """Best-effort cleanup for writers, async output worker, windows, and TTS."""
         async_out = self.config.features.async_output_pipeline
-        show_ball_debug = self.config.features.show_ball_debug
-        show_commentary_window = self.config.features.show_commentary_window
 
         if async_out and self.graphics_submission_queue is not None and self.graphics_return_queue is not None and self.graphics_thread is not None:
             try:
@@ -183,13 +181,13 @@ class Tracking:
             finally:
                 self.match_tts = None
 
-        if show_ball_debug:
+        if self.config.show_windows.ball_debug:
             try:
                 cv2.destroyWindow(FIELD_REPROJECTION_WINDOW_NAME)
             except cv2.error:
                 pass
 
-        if bool(show_commentary_window) and not async_out:
+        if self.config.show_windows.commentary and not async_out:
             try:
                 cv2.destroyWindow(COMMENTARY_DEBUG_WINDOW_NAME)
             except cv2.error:
@@ -306,7 +304,7 @@ class Tracking:
         timing_every = max(1, self.config.features.debug_timing_every_n_frames)
 
         async_out = self.config.features.async_output_pipeline
-        show_comm_win = self.config.features.show_commentary_window
+        show_comm_win = self.config.show_windows.commentary
         async_queue_sz = max(1, self.config.features.async_output_queue_size)
         if async_out:
             self.graphics_submission_queue, self.graphics_return_queue, self.graphics_thread = start_graphics_thread(
@@ -404,14 +402,13 @@ class Tracking:
 
                 self._apply_temporal_smoothing(self.track_values[self.frame_id])
 
-                show_ball_dbg = self.config.features.show_ball_debug
-                t_tr = time.perf_counter() if show_ball_dbg else None
+                t_tr = time.perf_counter() if self.config.show_windows.ball_debug else None
                 ball_debug = self._display.update_ball_debug(
                     self.frame_id,
                     float(fps),
                     self.track_values[self.frame_id],
                     plan_view_drawer,
-                    show_ball_dbg,
+                    self.config.show_windows.ball_debug,
                 )
                 ball_trail_ms = (time.perf_counter() - t_tr) * 1000.0 if t_tr is not None else 0.0
 

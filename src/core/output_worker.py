@@ -59,7 +59,7 @@ def do_output_work(
     plan_view_drawer: Any,
 ) -> None:
     # TODO questa andrebbe spostata nel livello superiore ora, deve essere uno stato persistente
-    ui_enabled = config.features.show_preview or config.features.show_ball_debug or config.features.show_commentary_window
+    ui_enabled = config.show_windows.preview or config.show_windows.ball_debug or config.show_windows.commentary
 
     t0 = time.perf_counter()
     plan_view = calibration.antiproject_image(job.frame, dst_hw)
@@ -88,7 +88,7 @@ def do_output_work(
     draw_overlays_ms = (time.perf_counter() - t_draw) * 1000.0
 
     field_reproj_ms = 0.0
-    if ui_enabled and config.features.show_ball_debug:
+    if ui_enabled and config.show_windows.ball_debug:
         t_fr = time.perf_counter()
         try:
             show_field_reprojection_window(
@@ -107,7 +107,7 @@ def do_output_work(
             )
         field_reproj_ms = (time.perf_counter() - t_fr) * 1000.0
 
-    if ui_enabled and config.features.show_commentary_window:
+    if ui_enabled and config.show_windows.commentary:
         try:
             show_debug_window(
                 job.commentary_event_label if job.commentary_event_label is not None else "-",
@@ -127,7 +127,7 @@ def do_output_work(
     write_out_ms = (time.perf_counter() - t_out) * 1000.0
 
     t_prev = time.perf_counter()
-    if ui_enabled and config.features.show_preview:
+    if ui_enabled and config.show_windows.preview:
         try:
             _af = cv2.resize(annotated_frame, (1280, 720))
             cv2.imshow("Tracking", _af)

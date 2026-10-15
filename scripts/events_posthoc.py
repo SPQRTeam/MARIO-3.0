@@ -70,7 +70,7 @@ def process_events_posthoc(config, mario_section_name, models_for_commentary=Non
                 commentator=commentator,
                 match_tts=models.match_tts,
                 llm=models.llm,
-                show_window=config.features.show_commentary_window,
+                show_window=config.show_windows.commentary,
             )
 
     working_files_tracker.finalize_and_cleanup()

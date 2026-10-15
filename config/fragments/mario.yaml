@@ -42,6 +42,11 @@ tts:
   # Keep per-line wav snippets used to build commentary mix.
   keep_commentary_audio_segments: true
 
+show_windows:
+  preview: false
+  ball_debug: false
+  commentary: false
+
 features:
   colors: [red, blue, unknown]
   cnn_abstain_below_confidence: 0.8
@@ -49,7 +54,6 @@ features:
   write_videos: true
   # Save raw resized camera stream without boxes/overlays.
   save_yolo_dataset: false
-  show_preview: true
   # Offload remap, annotation, CSV/video write, OpenCV windows to a background thread so the main
   # thread stays on YOLO + homography + CNN. Queue applies backpressure if encoding/UI lags (no dropped frames).
   async_output_pipeline: true
@@ -59,7 +63,6 @@ features:
   # Log every N frames (1 = every frame; 30 avoids flooding).
   debug_timing_every_n_frames: 30
   # Second OpenCV window: plan view + ball trail + speed (field mm/s).
-  show_ball_debug: true
   ball_debug_trail_frames: 90
   # Drop ball detections whose projected field position is outside the pitch (mm). You have to decide this according to your calibration.
   reject_ball_outside_field: true
@@ -67,7 +70,6 @@ features:
   ball_inside_field_margin_mm: 0
   commentate: true
   # OpenCV window "MARIO Debug": event, last commentary line, ball possession (nearest robot + team). Same thread as other GUI when async_output_pipeline is on.
-  show_commentary_window: true
   # Rolling median field (mm) + majority BGR per track id — used for overlays, CSV, and commentator.
   temporal_smooth_enabled: true
   temporal_smooth_position_window: 4
