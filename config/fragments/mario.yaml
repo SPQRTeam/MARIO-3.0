@@ -48,6 +48,7 @@ show_windows:
   commentary: false
 
 features:
+  enable_ocr_score: false
   colors: [red, blue, unknown]
   cnn_abstain_below_confidence: 0.8
   write_csv: true

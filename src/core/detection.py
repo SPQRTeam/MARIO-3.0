@@ -216,6 +216,7 @@ class FrameIteratorBase:
         self._show_debug_ocr = mario_config.commentating.show_debug_ocr
         logger.info("OCR debug windows enabled: %s", self._show_debug_ocr)
 
+        self.enable_ocr = mario_config.features.enable_ocr_score
         self._ocr_epoch = 0
         self._ocr_in_flight = False  # True while a VLM pair is pending; skip new cycles
 
@@ -311,7 +312,7 @@ class FrameIteratorBase:
         nested_suppress_ms = (time.perf_counter() - t5) * 1000.0
 
         ocr_schedule_ms = 0.0
-        if self._current_frame % OCR_PERIOD == 0 and not self._ocr_in_flight:
+        if self.enable_ocr and self._current_frame % OCR_PERIOD == 0 and not self._ocr_in_flight:
             t_ocr = time.perf_counter()
             try:
                 ly1, ly2, lx1, lx2 = self._ocr_crop_left
