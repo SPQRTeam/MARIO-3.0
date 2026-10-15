@@ -36,6 +36,7 @@ commentary_segments
 data/games/Final_GO/*
 data/games/*/mario_*/teams.json
 data/games/*/gc_section_*/metadata.yaml
+data/gc-logs
 
 **/sumgen_output/stats.json
 **/sumgen_global/*.txt
