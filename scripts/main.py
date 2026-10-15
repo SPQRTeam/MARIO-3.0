@@ -231,7 +231,9 @@ def main():
         if not args.sections:
             args.sections = ["S"]
 
-    if len(args.sections) != 1 and args.side_hint is not None:
+    sections_to_do = utils.get_section_names_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
+
+    if len(sections_to_do) != 1 and args.side_hint is not None:
         raise ValueError("Only specify --side-hint with 1 section. The hint will then be saved for future runs (even multi-section ones)")
 
     # load models — commentary text LLM: OpenAI API or local Ollama (see models.commentary_llm_backend)
@@ -249,8 +251,6 @@ def main():
         llm = llm,
         match_tts=match_tts,
     )
-
-    sections_to_do = utils.get_section_names_to_do(paths.game_dir, config.dir_names.mario_section_prefix, args.sections)
 
     if config.is_streaming:
         for section_name in sections_to_do:
