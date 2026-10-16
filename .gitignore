@@ -15,6 +15,7 @@ game_history.yaml
 **/error/*.eps
 
 data/games/old
+data/games/USELESS
 OLD_*.npy
 
 WIPario_*
