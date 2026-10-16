@@ -68,7 +68,7 @@ def add_multimario_arguments(parser):
     )
 
 
-def go(args):
+def go_prelims(args):  # this is all side-effect onto the disk
 
     # elaborate GC logs
 
@@ -89,7 +89,6 @@ def go(args):
     # calibrate everything first
 
     ask_calibration_timestamp = True
-    side_hints = dict()
 
     for game_name in args.game_names:
         game_dir = ROOT_DIR / "data" / "games" / game_name
@@ -142,8 +141,11 @@ def go(args):
                     _sh_split = _sh.split(" ")
                     assert len(_sh_split) == 2
                     _sh_serialized = SideHint.get_serialization(*_sh_split)
-                    _sh_serialized = check_coherence_with_saved_or_update(section_dir / "side_hint.txt", _sh_serialized, "side hint", "-sh", required=False)  # this also saves the provided side hint.
-                    side_hints[(game_name, section_name)] = _sh.split(",")
+                    _sh_serialized = check_coherence_with_saved_or_update(section_dir / "side_hint.txt", _sh_serialized, "side hint", "-sh", required=False)
+                    # this also saves the provided side hint, making it available for mario later.
+
+
+def go_mario(args):
 
     # mario everything later
 
@@ -159,14 +161,11 @@ def go(args):
                 succeeded[game_name].append(section_name)
             else:
                 section_letter = section_name[6:]
-                section_dir = game_dir / section_name
                 _cmd = [
                     "python3", "scripts/main.py",
                     "-g", game_name,
                     "-s", section_letter,
                 ]
-                if (game_name, section_name) in side_hints:
-                    _cmd += ["-sh"] + side_hints[(game_name, section_name)]
                 completed_process = subprocess.run(_cmd)
                 if completed_process.returncode == 0:
                     succeeded[game_name].append(section_name)
@@ -174,6 +173,11 @@ def go(args):
                     failed.append(f"{game_name}/{section_name}")
 
     return succeeded, failed
+
+
+def go(args):
+    go_prelims(args)
+    return go_mario(args)
 
 
 # support standalone execution, just because we are in scripts

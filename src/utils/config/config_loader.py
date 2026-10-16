@@ -11,7 +11,7 @@ from datetime import datetime
 from ..coherence import check_coherence_with_saved_or_update
 from src.vision.color_cnn import ColorCNNBooster, ColorCNNNao
 
-from .paths import PathsConfig, ROOT_DIR
+from .paths import PathsConfig, ROOT_DIR, PATHS_CONFIG_PATH
 from .vision import VisionConfig
 
 FIELD_TYPE_TO_FILE = {
@@ -88,8 +88,7 @@ class MarioConfig(Munch):
             game_history.append(record)
 
         self.game_name = record["game_name"]
-        paths_path = ROOT_DIR / "config" / "paths" / "paths.yaml"
-        with open(paths_path, 'r') as f:
+        with open(PATHS_CONFIG_PATH, 'r') as f:
             self.paths_data = yaml.safe_load(f)
         # paths don't get a field in self because they're heavily dependent on the section
         paths = self.get_paths()  # that said, we do need some section-agnostic paths right now
