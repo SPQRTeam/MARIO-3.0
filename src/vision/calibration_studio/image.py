@@ -14,8 +14,7 @@ class CSImage:
         self.window_initted = False
         self.win_move = win_move
         self.base_image = frame.copy()
-        self.points = np.empty([0,2], dtype=int)
-        self.selected_point = -1
+        self.reset_points()
         self.center = [frame.shape[1]//2, frame.shape[0]//2]
         self.moving_center = False
         self.draw = None
@@ -26,6 +25,10 @@ class CSImage:
             cv.moveWindow(self.name, *self.win_move)
             cv.setMouseCallback(self.name, self._mouse_callback)
             self.window_initted = True
+
+    def reset_points(self):
+        self.points = np.empty([0,2], dtype=int)
+        self.selected_point = -1
 
     def window_is_visible(self):
         return cv.getWindowProperty(self.name, cv.WND_PROP_VISIBLE) >= 1

@@ -34,6 +34,7 @@ class CalibrationStudio:
         self.src.set_drawer(Drawer(config, None))
         self.used = False
         self.result_ok = False
+        self.ragequit_presses = 0  # the total reset feature
 
     @property
     def center(self):
@@ -93,6 +94,7 @@ class CalibrationStudio:
         Homography:
         - Click on the images to select at least 4 points on both of them.
         - Click on a previously placed point to select it, then click somewhere else to reposition it, or press X to delete it.
+        - Press P three times (even not consecutively!) to delete all source points.
             
         Radial:
         - Once you're done with the homography, use Q for a big increase, A for a big decrease, W for a small increase, or S for a small decrease.
@@ -128,6 +130,11 @@ class CalibrationStudio:
             if key == ord('x'):
                 self.src.destroy_selected()
                 self.dst.destroy_selected()
+            elif key == ord('p'):
+                self.ragequit_presses += 1
+                if self.ragequit_presses >= 3:
+                    self.ragequit_presses = 0
+                    self.src.reset_points()
 
             n = min(self.src.points.shape[0], self.dst.points.shape[0])
             homography_ready = n >= 8
