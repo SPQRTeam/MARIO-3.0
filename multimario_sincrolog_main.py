@@ -1,10 +1,13 @@
 import argparse
 import subprocess
+import yaml
 
 import scripts.multimario as multimario_base
 from src.utils.config.paths import ROOT_DIR, PathsConfig
 from src.utils.coherence import arg_saved_or_ask
 from src.utils.sectioning import get_section_names_to_do
+from src.utils.side_hint import SideHint
+from src.utils.team_info import make_team_mapping_lr
 
 # take the backlink as proof that a section has already been auto-param'd
 # also memo, autoparams must be done for all sections at once or the check for automation kinda breaks
@@ -25,6 +28,18 @@ def sections_to_sincrolog(game_name):
         if not paths.merged_csv.exists():
             result.append(gc_section_name[len(PREFIX):])
     return result
+
+def make_team_mappings(game_name):
+    paths = PathsConfig.from_yaml(game_name)
+    with open(paths.gameinfo, 'r') as f:
+        gameinfo = yaml.safe_load(f)
+    for mario_section_name in get_section_names_to_do(paths.game_dir, "mario_", None):
+        paths.MARIO_SECTION = mario_section_name
+        side_hint = SideHint.loads(paths.side_hint_txt.read_text())
+        make_team_mapping_lr(gameinfo, side_hint, mario_section_name, dict()).dump(
+            paths.team_mapping_lr,
+            indent=4,
+        )
 
 def do_sincrolog(game_name, robot_type, gc_sections=None):
     subprocess.run([
@@ -61,6 +76,9 @@ def main():
     # do this early as it's still potential user interaction
     for game_name in args.game_names:
         if args.recalibrate or autoparams_needed(game_name):
+            print(game_name)
+            # sumgen needs this json to work. this also helps us check for any typos in the side hints.
+            make_team_mappings(game_name)
             subprocess.run([
                 "python3", "sumgen_main.py",
                 "-g", game_name,

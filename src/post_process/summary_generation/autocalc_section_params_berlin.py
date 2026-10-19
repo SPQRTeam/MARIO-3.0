@@ -21,7 +21,11 @@ def process_section(mario_section_name, config, predetermined_gc_section_name=No
 
     gc_df = pd.read_csv(section_paths.gc_raw_csv)
 
-    gc_start_time = float(find_gc_start_time(gc_df, 0))
+    gc_start_time = find_gc_start_time(gc_df, 0)
+    if gc_start_time is None:
+        gc_start_time = float(gc_df["gctime"].max())
+    else:
+        gc_start_time = float(gc_start_time)
 
     with open(section_paths.team_mapping_lr) as f:
         team_mapping_lr = json.load(f)
