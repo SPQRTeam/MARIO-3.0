@@ -39,8 +39,8 @@ class Benchwarmer:
 PATTERN = re.compile(r"teams_(home|away)_players_([0-9]+)_penalty")
 
 class Section:
-    def __init__(self, number, start_timestamp, config):
-        self.number = number
+    def __init__(self, name, start_timestamp):
+        self.name = name
         self.start_timestamp = start_timestamp
         self.phase = set()
         self.state_records = []
@@ -48,11 +48,6 @@ class Section:
         self.players_individual_records = defaultdict(list)
         self.events_records = []
         self.penalties_records = []
-        self.config = config
-
-    @property
-    def name(self):
-        return self.config.dir_names.gc_section_prefix + str(self.number)
 
     @staticmethod
     def conv(df):
@@ -82,8 +77,9 @@ class Section:
 This is the entry point.
 """
 class DataTransmuter:
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, gc_log_path, section_prefix):
+        self.gc_log_path = gc_log_path
+        self.section_prefix = section_prefix
         self.current_section = None
         self.next_section_number = 0
         self.results = defaultdict(dict)
@@ -121,7 +117,8 @@ class DataTransmuter:
 
     def on_section_start(self, item):
         # it's important to reinitialize and NOT clear in-place, or the results may be affected!
-        self.current_section = Section(self.next_section_number, item.timestamp, self.config)
+        section_name = self.section_prefix + str(self.next_section_number)
+        self.current_section = Section(section_name, item.timestamp)
         self.next_section_number += 1
 
     def on_section_end(self):
@@ -228,7 +225,7 @@ class DataTransmuter:
     def stir(self):
         if self.results:
             raise ValueError("Can only be used once.")
-        for item in iterate_yaml_list_items(self.config.get_paths().gc_log):
+        for item in iterate_yaml_list_items(self.gc_log_path):
             itemtype =  item["entry"]["__type__"]
 
             if itemtype == "metadata":

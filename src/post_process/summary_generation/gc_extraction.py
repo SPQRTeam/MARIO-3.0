@@ -3,7 +3,10 @@ import yaml
 from src.post_process.game_controller.data_transmutation import DataTransmuter
 
 def main(config):
-    metadata, data = DataTransmuter(config).stir()
+    metadata, data = DataTransmuter(
+        gc_log_path=config.get_paths().gc_log,
+        section_prefix=config.dir_names.gc_section_prefix,
+    ).stir()
     if metadata:
         with open(config.get_paths().gameinfo, "w") as f:
             yaml.safe_dump(metadata.params.game, f)
