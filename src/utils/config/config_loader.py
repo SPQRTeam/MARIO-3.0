@@ -7,12 +7,14 @@ from munch import Munch
 from src.utils.transforms import TransformsCalculator
 import numpy as np
 from datetime import datetime
+from functools import cached_property
 
 from ..coherence import check_coherence_with_saved_or_update
 from src.vision.color_cnn import ColorCNNBooster, ColorCNNNao
 
 from .paths import PathsConfig, ROOT_DIR, PATHS_CONFIG_PATH
 from .vision import VisionConfig
+from .field import FieldConfig
 
 FIELD_TYPE_TO_FILE = {
     "SPL": "fieldSPL.yaml",
@@ -99,21 +101,13 @@ class MarioConfig(Munch):
             self.streaming_url = record["streaming_url"]
             self.time_range = record["time_range"]
 
-        self.field_type = check_coherence_with_saved_or_update(paths.field_type_txt, args.field_type, "field type", "-f", required=True)
-        # load field dimensions
-        field_path = ROOT_DIR / "config" / "fields" / FIELD_TYPE_TO_FILE[self.field_type]
-        with open(field_path, 'r') as f:
-            data = yaml.safe_load(f)
-        # circus yaml is in metres, convert to mm
-        self.field_config = Munch({k: v * 1000 for k, v in data.items()})
-        # precalculate and cache a bunch of derived measures, too
-        self.field_config.xlimit = self.field_config.width / 2
-        self.field_config.ylimit = self.field_config.height / 2
-        self.field_config.goal_area_ylimit = self.field_config.goal_area_height / 2
-        self.field_config.penalty_area_ylimit = self.field_config.penalty_area_height / 2
-        self.field_config.penalty_mark_x = self.field_config.xlimit - self.field_config.penalty_mark_distance
-        # note: goal_width is correct below, goal measures have a different nomenclature than field area measures
-        self.field_config.goalpost_y = self.field_config.goal_width / 2
+        # set up lazy field config (im making gcviz which isn't tied to a game, so it'll load field directly rather than passing through here)
+        try:
+            self.field_type_from_cli = args.field_type
+            # be eager if explicitly given in the CLI so any script can update the saved one
+            _ = self.field_config
+        except AttributeError:  # not in namespace, i.e. config created from a script that doesn't have this arg
+            self.field_type_from_cli = None
 
         # set up lazy robot vision config (it only matters for the tracker, so i don't want stuff like GC extraction to care)
         try:
@@ -142,6 +136,19 @@ class MarioConfig(Munch):
 
     def get_paths(self, *, mario_section_name=None, gc_section_name=None):
         return PathsConfig(self.paths_data, self.game_name, mario_section_name=mario_section_name, gc_section_name=gc_section_name)
+
+    # lazy field config
+    @cached_property
+    def field_type(self):
+        return check_coherence_with_saved_or_update(self.get_paths().field_type_txt, self.field_type_from_cli, "field type", "-f", required=True)
+    @cached_property
+    def field_config(self):
+        field_path = ROOT_DIR / "config" / "fields" / FIELD_TYPE_TO_FILE[self.field_type]
+        with open(field_path, 'r') as f:
+            field_config: FieldConfig = yaml.safe_load(f)
+        # circus yaml is in metres, convert to mm
+        field_config.scale(1000)
+        return field_config
 
     # lazy vision config
     def _load_vision_config(self):

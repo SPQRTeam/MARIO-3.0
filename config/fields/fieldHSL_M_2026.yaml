@@ -1,3 +1,4 @@
+!field
 width: 14.0                 # x dimension (long side length of the field)
 height: 9.0                 # y dimension (short side length of the field)
 center_radius: 1.5          # center circle radius
