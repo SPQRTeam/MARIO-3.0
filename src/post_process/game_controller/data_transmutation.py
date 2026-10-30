@@ -158,7 +158,7 @@ class DataTransmuter:
         # can't automatize so much because of legacy column names, luckily these rows are not as big as the game state's
         individual_csvable = munch.Munch(
             gctime=gc_utils.timestamp_to_float(gc_utils.timestamp_diff(item.timestamp, self.current_section.start_timestamp)),
-            playing=game_state.state == "playing",
+            playing=game_state.state == "playing" and not game_state.stopped,
             x=item.entry.pose.x,
             y=item.entry.pose.y,
             theta=item.entry.pose.theta,
@@ -168,6 +168,8 @@ class DataTransmuter:
             fallen=item.entry.fallen,
             penalized=game_state[f"teams_{my_homeness}_players_{item.entry.player_num}_penalty"] != "noPenalty",
             gamestate=game_state.state,
+            gamestopped=game_state.stopped,
+            setplay=game_state.setPlay,
             secsremaining=game_state.primaryTimer_remaining_0,
         )
         self.current_section.players_individual_records[(item.entry.player_num, item.entry.team_num)].append(individual_csvable)
