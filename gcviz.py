@@ -4,8 +4,6 @@ import argparse
 import math
 import tqdm
 from pathlib import Path
-import munch
-import yaml
 
 from src.utils.opencv_qt_fonts import ensure_opencv_qt_fonts
 ensure_opencv_qt_fonts()
@@ -36,7 +34,6 @@ def main():
     config.field_type = _field_type
 
     # 1. Parse YAML using DataTransmuter
-    print("Parsing YAML data...")
     metadata, data = DataTransmuter(
         gc_log_path=args.yaml,
         section_prefix=config.dir_names.gc_section_prefix,
@@ -80,11 +77,18 @@ def process_section(section_name, section, gameinfo, draw, args):
     max_time_ms = gc_records[-1]['gctime']
     frame_count = math.ceil((max_time_ms / 1000.0) * args.fps)
 
-    current_state = {}
+    robot_state = {}
     event_idx = 0
     total_events = len(gc_records)
+    
+    # Initialize game_state directly from the first record
+    game_state = {
+        'gamestate': gc_records[0]['gamestate'],
+        'secsremaining': gc_records[0]['secsremaining'],
+        'gamestopped': gc_records[0]['gamestopped']
+    }
 
-    progressbar = tqdm.tqdm(total=frame_count, desc=f"Fast GC Ideal: {section_name}")
+    progressbar = tqdm.tqdm(total=frame_count, desc=f"gcviz {section_name}")
 
     scale_factor = args.width / 1920.0
     radius = max(5, int(20 * scale_factor))
@@ -98,14 +102,19 @@ def process_section(section_name, section, gameinfo, draw, args):
 
         while event_idx < total_events and gc_records[event_idx]['gctime'] <= timestamp:
             ev = gc_records[event_idx]
-            current_state[(ev['team'], ev['player'])] = ev
+            robot_state[(ev['team'], ev['player'])] = ev
+            
+            game_state['gamestate'] = ev['gamestate']
+            game_state['secsremaining'] = ev['secsremaining']
+            game_state['gamestopped'] = ev['gamestopped']
+                
             event_idx += 1
 
         frame = base_frame.copy()
         penalized_home = set()
         penalized_away = set()
 
-        for (team, player), row in current_state.items():
+        for (team, player), row in robot_state.items():
             is_home = (team == gameinfo.teams.home.number)
             
             if row['penalized']:
@@ -135,6 +144,26 @@ def process_section(section_name, section, gameinfo, draw, args):
         if penalized_away:
             cv.putText(frame, "Pen. " + " ".join(str(p) for p in sorted(penalized_away)),
                        (args.width // 2, args.height - max(10, args.height // 40)), cv.FONT_HERSHEY_SIMPLEX, pen_scale, TEAM_COLORS[gameinfo.teams.away.fieldPlayerColor], pen_thick)
+
+        # Draw Right-Side UI text (State, Time, Stop)
+        ui_x = int(args.width * 0.82)
+        ui_y_state = max(25, int(50 * scale_factor))
+        ui_y_time = ui_y_state + max(25, int(40 * scale_factor))
+        ui_y_stop = ui_y_time + max(25, int(40 * scale_factor))
+
+        cv.putText(frame, game_state['gamestate'].capitalize(), (ui_x, ui_y_state), 
+                   cv.FONT_HERSHEY_SIMPLEX, pen_scale, (255, 255, 255), pen_thick)
+
+        time_sign = "-" if game_state['secsremaining'] < 0 else ""
+        abs_secs = abs(game_state['secsremaining'])
+        time_str = f"{time_sign}{abs_secs // 60:02d}:{abs_secs % 60:02d}"
+        
+        cv.putText(frame, time_str, (ui_x, ui_y_time), 
+                   cv.FONT_HERSHEY_SIMPLEX, pen_scale, (255, 255, 255), pen_thick)
+
+        if game_state['gamestopped']:
+            cv.putText(frame, "STOP", (ui_x, ui_y_stop), 
+                       cv.FONT_HERSHEY_SIMPLEX, pen_scale, (0, 0, 255), pen_thick)
 
         out.write(frame)
         progressbar.update(1)
