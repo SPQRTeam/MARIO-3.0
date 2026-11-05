@@ -33,6 +33,13 @@ def add_multimario_arguments(parser):
         help="Force opening the Calibration Studio for each game"
     )
     parser.add_argument(
+        "--calibration-median-frames",
+        "-cm",
+        type=int,
+        default=1,
+        help="Passed to the Calibration Studio: calibrate on the per-pixel median of this many frames of the video instead of one frame (removes people on the lines). 1 = single frame."
+    )
+    parser.add_argument(
         "--skip-video-analysis",
         action="store_true",
         help="Skip the video analysis, the heaviest part of the process. Useful if you only need to regenerate some post-processing stuff"
@@ -86,7 +93,7 @@ def go(args):
 
     # calibrate everything first
 
-    ask_calibration_timestamp = True
+    ask_calibration_timestamp = args.calibration_median_frames <= 1  # -cm replaces the timestamp
     side_hints = dict()
 
     for game_name in args.game_names:
@@ -125,6 +132,8 @@ def go(args):
                     ]
                     if calibration_timestamp_str is not None:
                         _cmd += ["-ct", calibration_timestamp_str]
+                    if args.calibration_median_frames > 1:
+                        _cmd += ["-cm", str(args.calibration_median_frames)]
                     completed_process = subprocess.run(_cmd)
                     if completed_process.returncode == 0:
                         break
