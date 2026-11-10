@@ -16,6 +16,7 @@ parser.add_argument("--calibration-frame", "-cf", type=str, default=None, help="
 args = parser.parse_args()
 args.streaming = False  # for MarioConfig compatibility
 args.vision_type = None  # for MarioConfig compatibility
+args.verbose = False
 
 config = utils.MarioConfig.from_yaml(args, update_game_history=False)
 section_name = config.dir_names.mario_section_prefix + args.section

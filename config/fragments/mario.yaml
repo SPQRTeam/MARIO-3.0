@@ -27,7 +27,7 @@ moondream:
   vram_reserve_gb: 0.9
   # Cap MoE layers kept in VRAM (null = as many as fit, ~10 GB, ~2 s/run). Each layer is ~0.4 GB.
   # 0 keeps all experts in RAM: ~3 GB of VRAM and ~8.3 GB of RAM, ~3.4 s/run.
-  max_resident_layers: 0
+  max_resident_layers: null
   # Refuse to load below this much available RAM (offloaded experts are pinned).
   min_available_ram_gb: 10
   # Image tiles fed to the vision encoder (model default 12).
