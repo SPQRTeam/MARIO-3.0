@@ -7,6 +7,8 @@ dir_names:
 
 models:
   # some models have been moved to vision_types
+  # Object detector: "yolo" | "moondream" (see the moondream section)
+  detector_backend: moondream
   bytetrack_config: "config/tracking/bytetrack.yaml"
   ocr_vlm_name: "glm-ocr:latest"
   # Testo per commento (detection score line, general_commentary): "ollama" | "openai"
@@ -16,6 +18,36 @@ models:
   openai_model: "gemma3:4b"
   openai_base_url: "http://localhost:11434/v1"
   openai_api_key: ollama
+
+# Used when models.detector_backend is moondream: Moondream 3.1 (src/ml/models/moondream_engine.py).
+# Weights (10.5 GB) download from Hugging Face on first use.
+moondream:
+  # VRAM left free after loading: the color CNN is loaded after it. MoE layers that don't fit
+  # stay in pinned RAM (~0.4 GB each, 20 layers) and are streamed to the GPU when used.
+  vram_reserve_gb: 0.9
+  # Cap MoE layers kept in VRAM (null = as many as fit, ~10 GB, ~2 s/run). Each layer is ~0.4 GB.
+  # 0 keeps all experts in RAM: ~3 GB of VRAM and ~8.3 GB of RAM, ~3.4 s/run.
+  max_resident_layers: 0
+  # Refuse to load below this much available RAM (offloaded experts are pinned).
+  min_available_ram_gb: 10
+  # Image tiles fed to the vision encoder (model default 12).
+  max_crops: 12
+  # Text prompt -> class id (0 = robot, anything else = ball). Plain "robot" misses robots, and on
+  # 3.1 "ball" and "soccer ball" also match the center and penalty marks.
+  labels: {"robot soccer player": 0, "a ball on the grass, not a line marking": 1}
+  max_objects: 20
+  # Run the model every N frames and interpolate its boxes in between.
+  stride: 30
+  # Extra tile grids per run, e.g. [3]. Each tile costs a full run.
+  grids: []
+  # Robot IDs: furthest a robot can move between runs, in box heights, and runs an ID survives unmatched.
+  track_gate: 1.5
+  track_max_lost: 2
+  # Keep only ball boxes up to this size (px) and width/height ratio.
+  ball_max_size_px: 80
+  ball_max_aspect: 1.6
+  # Drop robots this far beyond the field lines (mm): they are people around the pitch.
+  robot_outside_field_margin_mm: 500
 
 # Drop extra robot boxes on the same player (e.g. torso vs full body)
 # This avoid to have multiple detection for the same robot

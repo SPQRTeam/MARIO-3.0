@@ -209,6 +209,16 @@ class Tracking:
             return "unknown"
         return Counter(samples).most_common(1)[0][0]
 
+    def _in_playfield(self, det: Detection, margin: float) -> bool:
+        if det.position is None:
+            return False
+        fc = self.config.field_config
+        fx, fy = det.position
+        return (
+            abs(float(fx)) <= float(fc.xlimit) + margin
+            and abs(float(fy)) <= float(fc.ylimit) + margin
+        )
+
     def _apply_temporal_smoothing(self, detections: List[Detection]) -> None:
         """Median field position + majority jersey color per track id."""
         feats = self.config.features
@@ -372,21 +382,14 @@ class Tracking:
                 t_ball0 = time.perf_counter()
                 raw_balls = [d for d in self.track_values[self.frame_id] if d.cls_name == "ball"]
                 robots = [d for d in self.track_values[self.frame_id] if d.cls_name == "robot"]
+                if self.config.models.detector_backend == "moondream":
+                    # Moondream also labels people around the pitch as robots.
+                    robot_margin = self.config.moondream.robot_outside_field_margin_mm
+                    robots = [d for d in robots if self._in_playfield(d, robot_margin)]
                 reject_oob = self.config.features.reject_ball_outside_field
                 if reject_oob:
-                    fc = self.config.field_config
                     margin = self.config.features.ball_inside_field_margin_mm
-
-                    def _in_playfield(d: Detection) -> bool:
-                        if d.position is None:
-                            return False
-                        fx, fy = d.position
-                        return (
-                            abs(float(fx)) <= float(fc.xlimit) + margin
-                            and abs(float(fy)) <= float(fc.ylimit) + margin
-                        )
-
-                    balls = [d for d in raw_balls if _in_playfield(d)]
+                    balls = [d for d in raw_balls if self._in_playfield(d, margin)]
                     if not balls and raw_balls:
                         self._display.clear_ball_trail()
                 else:
@@ -440,6 +443,7 @@ class Tracking:
                 commentary_text = None
                 ball_motion_debug = None
 
+                commentate_ms = 0.0
                 if self.config.features.enable_event_processing:
                     frame_df = pd.DataFrame(_rows, columns=COLUMN_NAMES)
                     events = self.eventproc.process_frame(frame_df)

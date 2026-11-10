@@ -1,6 +1,7 @@
 """Detection dataclass and frame iterator for video processing."""
 
 import dataclasses
+import queue
 import re
 import threading
 import time
@@ -141,12 +142,70 @@ class Detection:
             for t in zip(boxes, confidences, classes, class_names, ids)
         ]
 
+    @staticmethod
+    def from_moondream(objects) -> List["Detection"]:
+        """Convert ``MoondreamDetector.detect`` output to Detection objects."""
+        detections = []
+        for (x1, y1, x2, y2), confidence, cls, track_id in objects:
+            box = BoundingBox.from_xcycwh((x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1)
+            cls_name = "robot" if cls == 0 else "ball"
+            detections.append(Detection(box, confidence, cls, cls_name, track_id))
+        return detections
+
     def __repr__(self) -> str:
         """String representation of the detection."""
         return (
             f"Detection(id={self.id}, cls={self.cls_name}, "
             f"conf={self.confidence:.2f}, color={self.color})"
         )
+
+
+def _interpolated(start: Detection, end: Detection, t: float) -> Detection:
+    """Copy of ``end`` with its box at fraction ``t`` of the way from ``start``'s box."""
+    x1, y1, x2, y2 = (
+        a + (b - a) * t
+        for a, b in (
+            (start.box.x1, end.box.x1),
+            (start.box.y1, end.box.y1),
+            (start.box.x2, end.box.x2),
+            (start.box.y2, end.box.y2),
+        )
+    )
+    box = BoundingBox.from_xcycwh((x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1)
+    return dataclasses.replace(end, box=box)
+
+
+def interpolate_detections(start: List[Detection], end: List[Detection], t: float) -> List[Detection]:
+    """
+    Detections at fraction ``t`` (0-1] of the way between two model runs.
+
+    Robots pair up by track ID and balls by distance. Objects seen only at the start
+    stay put until the end run, and objects seen only at the end appear at ``t == 1``.
+    """
+    if t >= 1:
+        return [dataclasses.replace(det) for det in end]
+
+    start_robots = {det.id: det for det in start if det.cls_name == "robot"}
+    start_balls = [det for det in start if det.cls_name == "ball"]
+    end_robots = [det for det in end if det.cls_name == "robot"]
+    end_balls = [det for det in end if det.cls_name == "ball"]
+
+    result = [
+        _interpolated(start_robots[det.id], det, t) for det in end_robots if det.id in start_robots
+    ]
+    end_ids = {det.id for det in end_robots}
+    result += [dataclasses.replace(det) for tid, det in start_robots.items() if tid not in end_ids]
+
+    if start_balls:
+        for ball in end_balls:
+            nearest = min(
+                start_balls,
+                key=lambda b: (b.box.xc - ball.box.xc) ** 2 + (b.box.y2 - ball.box.y2) ** 2,
+            )
+            result.append(_interpolated(nearest, ball, t))
+        if not end_balls:
+            result += [dataclasses.replace(det) for det in start_balls]
+    return result
 
 
 @dataclass
@@ -166,6 +225,8 @@ class FrameIteratorBase:
     Uses YOLOv12 with ByteTrack for robot detection and tracking,
     and YOLOv8 for ball detection.
     """
+
+    _moondream_thread: Optional[threading.Thread] = None
 
     def __init__(
         self,
@@ -195,6 +256,10 @@ class FrameIteratorBase:
 
         self.yolo_v8 = models.yolo_v8
         self.yolo_v12 = models.yolo_v12
+        self.moondream = models.moondream
+        self._moondream_anchor: Optional[List[Detection]] = None  # latest model run
+        self._moondream_queue: Optional[queue.Queue] = None
+        self._moondream_stop = threading.Event()
         self.ocr_vlm = models.ocr_vlm
         self.llm = models.llm
         self.bytetrack_config = str(bytetrack_config) if bytetrack_config else None
@@ -242,8 +307,76 @@ class FrameIteratorBase:
 
     def seek(self, frame_idx: int):
         """Seek to a specific frame."""
+        self._stop_moondream_prefetch()
         self.video.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
         self._current_frame = frame_idx
+        self._moondream_anchor = None
+
+    def _read_moondream_window(self) -> List[Tuple[npt.NDArray, List[Detection]]]:
+        """
+        Read up to ``stride`` frames, run Moondream on the last one, and return them all
+        with boxes interpolated from the previous run.
+        """
+        # The very first frame has no previous run to interpolate from.
+        window_size = self.moondream.stride if self._moondream_anchor is not None else 1
+        frames = []
+        for _ in range(window_size):
+            ret, frame = self.video.read()
+            if not ret:
+                break
+            frames.append(frame)
+        if not frames:
+            return []
+
+        end = Detection.from_moondream(self.moondream.detect(frames[-1]))
+        start = self._moondream_anchor if self._moondream_anchor is not None else end
+        self._moondream_anchor = end
+        return [
+            (frame, interpolate_detections(start, end, i / len(frames)))
+            for i, frame in enumerate(frames, start=1)
+        ]
+
+    def _put_moondream_item(self, item: Any) -> None:
+        while not self._moondream_stop.is_set():
+            try:
+                self._moondream_queue.put(item, timeout=0.1)
+                return
+            except queue.Full:
+                pass
+
+    def _prefetch_moondream(self) -> None:
+        """Background loop: keeps the model busy while the main thread handles frames."""
+        try:
+            while not self._moondream_stop.is_set():
+                window = self._read_moondream_window()
+                if not window:
+                    break
+                for item in window:
+                    self._put_moondream_item(item)
+            self._put_moondream_item(None)
+        except Exception as e:
+            self._put_moondream_item(e)
+
+    def _stop_moondream_prefetch(self) -> None:
+        if self._moondream_thread is not None:
+            self._moondream_stop.set()
+            self._moondream_thread.join()
+            self._moondream_thread = None
+
+    def _next_moondream_frame(self) -> Tuple[bool, Optional[npt.NDArray], List[Detection]]:
+        if self._moondream_thread is None:
+            self._moondream_queue = queue.Queue(maxsize=2 * self.moondream.stride)
+            self._moondream_stop.clear()
+            self._moondream_thread = threading.Thread(target=self._prefetch_moondream, daemon=True)
+            self._moondream_thread.start()
+
+        item = self._moondream_queue.get()
+        if item is None:
+            return False, None, []
+        if isinstance(item, Exception):
+            raise item
+        frame, detections = item
+        return True, frame, detections
 
     def __iter__(self) -> Iterator[Tuple[npt.NDArray, List[Detection]]]:
         """Return iterator."""
@@ -264,7 +397,11 @@ class FrameIteratorBase:
             StopIteration: When video ends.
         """
         t0 = time.perf_counter()
-        ret, frame = self.video.read()
+        if self.moondream is not None:
+            # The model runs on a background thread: waiting for it shows up in video_read_ms.
+            ret, frame, detections = self._next_moondream_frame()
+        else:
+            ret, frame = self.video.read()
         t1 = time.perf_counter()
         video_read_ms = (t1 - t0) * 1000.0
 
@@ -276,30 +413,32 @@ class FrameIteratorBase:
             logger.info(f"Reached expected length at {self._current_frame} frames")
             raise StopIteration
 
-        # YOLOv12 for robot detection with ByteTrack
         t2 = time.perf_counter()
-        results_v12 = self.yolo_v12.track(
-            frame,
-            verbose=False,
-            tracker=self.bytetrack_config,
-            persist=True
-        ) if self.bytetrack_config else self.yolo_v12.predict(frame, verbose=False)
-        detections_v12 = Detection.from_results(results_v12)
-        t3 = time.perf_counter()
-        yolo_v12_ms = (t3 - t2) * 1000.0
-
+        yolo_v12_ms = 0.0
         yolo_v8_ms = 0.0
-        if self.use_v12_only:
-            detections = detections_v12
-        else:
-            # YOLOv8 for ball detection, fallback to v12 if missed
-            t4 = time.perf_counter()
-            results_v8 = self.yolo_v8(frame, verbose=False)
-            detections_v8 = Detection.from_results(results_v8)
-            balls_v8 = [det for det in detections_v8 if det.cls_name == "ball"]
-            balls = balls_v8 if balls_v8 else [det for det in detections_v12 if det.cls_name == "ball"]
-            detections = [det for det in detections_v12 if det.cls_name == "robot"] + balls
-            yolo_v8_ms = (time.perf_counter() - t4) * 1000.0
+        if self.moondream is None:
+            # YOLOv12 for robot detection with ByteTrack
+            results_v12 = self.yolo_v12.track(
+                frame,
+                verbose=False,
+                tracker=self.bytetrack_config,
+                persist=True
+            ) if self.bytetrack_config else self.yolo_v12.predict(frame, verbose=False)
+            detections_v12 = Detection.from_results(results_v12)
+            t3 = time.perf_counter()
+            yolo_v12_ms = (t3 - t2) * 1000.0
+
+            if self.use_v12_only:
+                detections = detections_v12
+            else:
+                # YOLOv8 for ball detection, fallback to v12 if missed
+                t4 = time.perf_counter()
+                results_v8 = self.yolo_v8(frame, verbose=False)
+                detections_v8 = Detection.from_results(results_v8)
+                balls_v8 = [det for det in detections_v8 if det.cls_name == "ball"]
+                balls = balls_v8 if balls_v8 else [det for det in detections_v12 if det.cls_name == "ball"]
+                detections = [det for det in detections_v12 if det.cls_name == "robot"] + balls
+                yolo_v8_ms = (time.perf_counter() - t4) * 1000.0
 
         t5 = time.perf_counter()
         rns = self._robot_nested_suppression
@@ -470,6 +609,7 @@ class FrameIteratorBase:
 
     def release(self):
         """Release video capture resource."""
+        self._stop_moondream_prefetch()
         if self.video.isOpened():
             self.video.release()
             logger.info("Video capture released")

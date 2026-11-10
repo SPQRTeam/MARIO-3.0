@@ -44,7 +44,7 @@ def graphics_thread_loop(submission_queue, return_queue, multiwriter, config, lo
                         "[timing:output_worker] frame=%s worker_sum_ms=%.1f | plan=%.1f annotate=%.1f "
                         "draw=%.1f field_repr=%.1f write=%.1f preview=%.1f waitkey=%.1f",
                         job.frame_id,
-                        work_times.worker_ms,
+                        work_times.total_work_ms,
                         work_times.plan_ms,
                         work_times.annotate_ms,
                         work_times.draw_overlays_ms,

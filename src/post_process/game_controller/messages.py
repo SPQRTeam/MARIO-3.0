@@ -20,7 +20,7 @@ class GCReturnMessage_v4:
             # if received value looks like a legitimate version that should be implemented, use an exception that is not caught for a loud report
             if 1 <= msg_data[1] and msg_data[1] <= 10:
                 raise ValueError(f"GC return message version doesn't match: expected {cls.THE_VERSION}, got {msg_data[1]}")
-            # otherwise, it's probably garbage by some random misconfigured robot: use a special exception that will be caught and silently ignored
+            # otherwise, it's probably invalid data from a misconfigured robot: use a special exception that will be caught and silently ignored
             else:
                 raise SkippableGCMessage()
         return {

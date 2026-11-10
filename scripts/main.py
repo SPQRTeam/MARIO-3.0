@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import src.utils as utils
 from src.core.tracker import Tracking
+from src.ml.models.moondream_detector import MoondreamDetector
 from src.ml.models.ollama_wrapper import OllamaWrapper
 from src.ml import load_llm, load_tts_maybe
 
@@ -242,10 +243,16 @@ def main():
     # Previously match_tts existed only with tts.enabled, so geometry LLM never ran with audio off.
     match_tts = load_tts_maybe(config, logger)
 
-    Models = namedtuple("Models", ["yolo_v8", "yolo_v12", "ocr_vlm", "llm", "match_tts"])
+    detector_backend = config.models.detector_backend
+    if detector_backend not in ("yolo", "moondream"):
+        raise ValueError(f"Unknown models.detector_backend: {detector_backend}")
+    use_yolo = detector_backend == "yolo"
+
+    Models = namedtuple("Models", ["yolo_v8", "yolo_v12", "moondream", "ocr_vlm", "llm", "match_tts"])
     models = Models(
-        yolo_v8 = YOLO(str(ROOT_DIR / config.vision_config.yolo_v8)),
-        yolo_v12 = YOLO(str(ROOT_DIR / config.vision_config.yolo_v12)),
+        yolo_v8 = YOLO(str(ROOT_DIR / config.vision_config.yolo_v8)) if use_yolo else None,
+        yolo_v12 = YOLO(str(ROOT_DIR / config.vision_config.yolo_v12)) if use_yolo else None,
+        moondream = None if use_yolo else MoondreamDetector(config),
         ocr_vlm = OllamaWrapper(config.models.ocr_vlm_name),
         llm = llm,
         match_tts=match_tts,
